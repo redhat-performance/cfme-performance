@@ -7,12 +7,41 @@ else
   YUM=yum
 fi
 
-sudo $YUM install -y python-virtualenv gcc postgresql-devel libxml2-devel libxslt-devel zeromq3-devel libcurl-devel redhat-rpm-config  gcc-c++  freetype-devel libffi-dev
-virtualenv .cfme_perf
-echo "export PYTHONPATH='`pwd`'" | tee -a ./.cfme_perf/bin/activate
-echo "export PYTHONDONTWRITEBYTECODE=yes" | tee -a ./.cfme_perf/bin/activate
+sudo $YUM install -y numpy \
+     python-virtualenv \
+     gcc \
+     postgresql-devel \
+     zeromq3-devel \
+     libxml2-devel \
+     libxslt-devel \
+     libcurl-devel \
+     redhat-rpm-config \
+     gcc-c++ \
+     python-virtualenv \
+     libffi-devel \
+     libpng \
+     libpng-devel \
+     freetype-devel \
+     openssl-devel \
+     libselinux-python \
+     yum \
+     sshpass
 
-. ./.cfme_perf/bin/activate
+venv_path=$1
+
+if [[ -z $venv_path ]]; then
+  venv_path="./.cfme_perf"
+fi
+
+if [[ ! -d $venv_path ]]; then
+  virtualenv -p python2 $venv_path
+fi
+
+echo "export PYTHONPATH='`pwd`'" | tee -a ${venv_path%/}/bin/activate
+echo "export PYTHONDONTWRITEBYTECODE=yes" | tee -a ${venv_path%/}/bin/activate
+
+. ${venv_path%/}/bin/activate
+
 PYCURL_SSL_LIBRARY=nss pip install -Ur ./requirements.txt
-echo "Run '. ./.cfme_perf/bin/activate' to load the virtualenv"
 
+echo "Run '. ${venv_path%/}/bin/activate' to load the virtualenv"

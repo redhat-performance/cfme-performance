@@ -10,4 +10,5 @@
     - ../group_vars/all.yml
     - ../group_vars/all.local.yml
   roles:
+    - version
     - reset-database

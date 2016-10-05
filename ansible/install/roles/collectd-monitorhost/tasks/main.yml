@@ -16,9 +16,10 @@
   yum: name={{ item }} state=present
   with_items:
     - collectd
-    - collectd-turbostat
+    # - collectd-turbostat
     - libsemanage-python
     - policycoreutils-python
+    - policycoreutils-python-utils
 
 - name: Configure collectd.conf
   template:
@@ -33,6 +34,10 @@
 
 - name: Set permissive for collectd
   shell: semanage permissive -a collectd_t
+
+- name: Add collectd group
+  group: name=collectd state=present
+  become: true
 
 - name: Setup collectd service
   service: name=collectd state=restarted enabled=true

@@ -1,15 +1,17 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 
-from ovirtsdk.api import API
-from ovirtsdk.xml import params
 import ast
 import sys
 import time
+from ovirtsdk.api import API
+from ovirtsdk.xml import params
+from ovirtsdk.infrastructure.errors import RequestError
 
 appliance = ast.literal_eval(sys.argv[1])
 rhevm_hostname = sys.argv[2]
 user = sys.argv[3]
 passw = sys.argv[4]
+item_type = sys.argv[5]
 
 MB = 1024 * 1024
 GB = 1024 * MB
@@ -32,92 +34,127 @@ def locked_disks(vm):
             return True
     return False
 
-vm_name = appliance['vm_name']
-template_object = api.templates.get(name=appliance['template'])
-template_disks = params.Disks(clone=appliance['clone_template'])
-cluster_object = api.clusters.get(name=appliance['cluster'])
-host_object = api.hosts.get(appliance['host'])
-migrate = appliance['migrate']
-appliance_nics = appliance['NICS'][:]
-appliance_memory = appliance['memory_size']
-appliance_type = appliance['vm_type']
-num_cores = appliance['cores']
-num_cpus = appliance['cpus']
-placement_object = params.VmPlacementPolicy(host=host_object, affinity=migrate)
-cpu_topology = params.CpuTopology(cores=num_cores, threads=num_cpus)
-cpu_object = params.CPU(topology=cpu_topology)
-storage_name = appliance['disk_location']
-domain_object = api.storagedomains.get(name=storage_name)
-actions = params.Action(storage_domain=domain_object)
 
-vm_params = params.VM(
-    name=vm_name,
-    template=template_object,
-    disks=template_disks,
-    cluster=cluster_object,
-    host=host_object,
-    cpu=cpu_object,
-    memory=appliance['memory_size'] * GB,
-    placement_policy=placement_object,
-    type_=appliance_type)
+def prepare_rhevm_template():
+    tmp = {
+        'template_disks': params.Disks(clone=appliance['clone_template']),
+        'cluster_object': api.clusters.get(name=appliance['cluster']),
+        'host_object': api.hosts.get(appliance['host']),
+        'migrate': appliance['migrate'],
+        'appliance_nics': appliance['NICS'][:],
+        'appliance_memory': appliance['memory_size'],
+        'appliance_type': appliance['vm_type'],
+        'num_cores': appliance['cores'],
+        'num_cpus': appliance['cpus'],
+        'storage_name': appliance['disk_location'],
+        'disks': appliance['disks']
+    }
 
-cfme_appliance = api.vms.add(vm_params)
+    tmp['cpu_topology'] = params.CpuTopology(
+        cores=tmp['num_cores'],
+        threads=tmp['num_cpus'])
+    tmp['cpu_object'] = params.CPU(topology=tmp['cpu_topology'])
+    tmp['domain_object'] = api.storagedomains.get(name=tmp['storage_name'])
+    tmp['actions'] = params.Action(storage_domain=tmp['domain_object'])
+    tmp['placement_object'] = params.VmPlacementPolicy(
+        host=tmp['host_object'],
+        affinity=tmp['migrate'])
+    return tmp
 
-while cfme_appliance.status.state == 'image_locked':
-    time.sleep(10)
-    cfme_appliance = api.vms.get(name=vm_name)
 
-for disk in appliance['disks']:
-    disk_size = appliance['disks'][disk]['size'] * GB
-    interface_type = appliance['disks'][disk]['interface']
-    disk_format = appliance['disks'][disk]['format']
-    allocation = appliance['disks'][disk]['allocation']
-    location = appliance['disks'][disk]['location']
-    store = api.storagedomains.get(name=location)
-    domain = params.StorageDomains(storage_domain=[store])
-    disk_param = params.Disk(
-        description=disk,
-        storage_domains=domain,
-        size=disk_size,
-        interface=interface_type,
-        format=disk_format,
-        type_=allocation)
-    new_disk = cfme_appliance.disks.add(disk=disk_param)
+def trigger_add_vm(**kwargs):
 
-if len(appliance_nics) > 0:
-    current_nics = cfme_appliance.get_nics().list()
-    current_networks = []
-    for nic in current_nics:
-            network_id = nic.get_network().id
-            current_networks.append(api.networks.get(id=network_id).name)
+    vm_params = params.VM(
+        name=kwargs['vm_name'],
+        template=kwargs['template_object'],
+        disks=kwargs['template_disks'],
+        cluster=kwargs['cluster_object'],
+        host=kwargs['host_object'],
+        cpu=kwargs['cpu_object'],
+        memory=kwargs['appliance_memory'] * GB,
+        placement_policy=kwargs['placement_object'],
+        type_=kwargs['appliance_type'])
 
-    new_set = set(appliance_nics)
-    current_set = set(current_networks)
-    appliance_nics = list(new_set - current_set)
+    try:
+        cfme_appliance = api.vms.add(vm_params)
+    except RequestError as E:
+        print("Error while creating vm(s)")
+        sys.exit(E)
 
-for i in range(len(appliance_nics)):
-    network_name = params.Network(name=appliance_nics[i])
-    nic_name = params.NIC(name='card{}'.format(i), network=network_name)
-    cfme_appliance.nics.add(nic=nic_name)
+    while cfme_appliance.status.state == 'image_locked':
+        time.sleep(10)
+        cfme_appliance = api.vms.get(name=kwargs['vm_name'])
 
-while locked_disks(cfme_appliance):
-    time.sleep(10)
-    cfme_appliance = api.vms.get(name=vm_name)
+    for disk in kwargs['disks']:
+        disk_size = kwargs['disks'][disk]['size'] * GB
+        interface_type = kwargs['disks'][disk]['interface']
+        disk_format = kwargs['disks'][disk]['format']
+        allocation = kwargs['disks'][disk]['allocation']
+        location = kwargs['disks'][disk]['location']
+        store = api.storagedomains.get(name=location)
+        domain = params.StorageDomains(storage_domain=[store])
+        disk_param = params.Disk(
+            description=disk,
+            storage_domains=domain,
+            size=disk_size,
+            interface=interface_type,
+            format=disk_format,
+            type_=allocation)
+        new_disk = cfme_appliance.disks.add(disk=disk_param)
 
-dev = params.Boot(dev='network')
-cfme_appliance.os.boot.append(dev)
-cfme_appliance.update()
+    if len(kwargs['appliance_nics']) > 0:
+        current_nics = cfme_appliance.get_nics().list()
+        current_networks = []
+        for nic in current_nics:
+                network_id = nic.get_network().id
+                current_networks.append(api.networks.get(id=network_id).name)
 
-for disk in cfme_appliance.disks.list():
-    if disk.description in appliance['disks'] or already_moved(domain_object, disk):
-        continue
-    disk.move(action=actions)
+        new_set = set(kwargs['appliance_nics'])
+        current_set = set(current_networks)
+        appliance_nics = list(new_set - current_set)
 
-cfme_appliance = api.vms.get(name=vm_name)
-while locked_disks(cfme_appliance):
-    time.sleep(10)
-    cfme_appliance = api.vms.get(name=vm_name)
+    for i in range(len(appliance_nics)):
+        network_name = params.Network(name=appliance_nics[i])
+        nic_name = params.NIC(name='card{}'.format(i), network=network_name)
+        cfme_appliance.nics.add(nic=nic_name)
 
-cfme_appliance.start()
+    while locked_disks(cfme_appliance):
+        time.sleep(10)
+        cfme_appliance = api.vms.get(name=kwargs['vm_name'])
 
-api.disconnect()
+    dev = params.Boot(dev='network')
+    cfme_appliance.os.boot.append(dev)
+    cfme_appliance.update()
+
+    for disk in cfme_appliance.disks.list():
+        if disk.description in appliance['disks'] \
+                or already_moved(kwargs['domain_object'], disk):
+            continue
+        disk.move(action=kwargs['actions'])
+
+    cfme_appliance = api.vms.get(name=kwargs['vm_name'])
+    while locked_disks(cfme_appliance):
+        time.sleep(10)
+        cfme_appliance = api.vms.get(name=kwargs['vm_name'])
+
+    cfme_appliance.start()
+
+
+def run():
+    obj_dict = prepare_rhevm_template()
+
+    if item_type == 'multiple_vms':
+        for vm in appliance['vms']:
+            obj_dict['vm_name'] = vm['vm_name']
+            obj_dict['template_object'] = api.templates.get(name=vm['template'])
+            trigger_add_vm(**obj_dict)
+    elif item_type == 'single_vm':
+        obj_dict['vm_name'] = appliance['vm_name']
+        obj_dict['template_object'] = api.templates.get(name=appliance['template'])
+        trigger_add_vm(**obj_dict)
+
+    api.disconnect()
+
+
+if __name__ == '__main__':
+    run()

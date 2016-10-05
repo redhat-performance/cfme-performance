@@ -1,25 +1,70 @@
-"""REST API interactions to the appliance for provider and VM configuration/testing."""
-from mgmtsystem.virtualcenter import VMWareSystem
-from mgmtsystem.rhevm import RHEVMSystem
-from utils.conf import cfme_performance
-from utils.log import logger
-from utils.ssh import SSHClient
-from utils.version import get_version
+"""
+REST API interactions to the appliance for provider
+and VM configuration testing.
+"""
 import copy
 import json
 import requests
 import time
+from utils.log import logger
+from utils.ssh import SSHClient
+from utils.version import get_version
+from utils.conf import cfme_performance
+from ovirtsdk.api import API
+from mgmtsystem.virtualcenter import VMWareSystem
+from mgmtsystem.rhevm import RHEVMSystem
+
+cfme_appliance = cfme_performance['appliance']
+cfme_providers = cfme_performance['providers']
+
+
+def get_all_vm_endpoints(pattern='*', provider='perf-rhevm'):
+    """
+    Takes in a pattern and returns all VM ip addresses and names.
+
+    @pattern: Appliance(VM) Name pattern.
+            Example: 'Infra*'
+    @provider: Provider Name as per 'providers:' in cfme_performance[local].yml
+            Default is 'perf-rhevm'.
+    """
+    provider = cfme_performance.providers[provider]
+    ip_address = provider.ip_address
+    username = provider.credentials.username
+    password = provider.credentials.password
+
+    api = API(
+        url='https://%s' % ip_address,
+        username=username,
+        password=password,
+        insecure=True
+    )
+    vmlist = api.vms.list(name=pattern)
+
+    results = {}
+    for vm in vmlist:
+        addresses = []
+        if vm.guest_info is not None:
+            ips = vm.guest_info.get_ips()
+            for ip in ips.get_ip():
+                addresses.append(ip.get_address())
+        results[vm.name] = addresses
+
+    api.disconnect()
+
+    return results
 
 
 def get_all_provider_ids():
-    """Returns an integer list of provider ID's via the REST API"""
+    """
+    Returns an integer list of provider ID's via the REST API
+    """
     logger.debug('Retrieving the list of provider ids')
 
     provider_ids = []
     provider_response = requests.get(
-        url="https://" + cfme_performance['appliance']['ip_address'] + "/api/providers",
-        auth=(cfme_performance['appliance']['rest_api']['username'],
-              cfme_performance['appliance']['rest_api']['password']),
+        url="https://" + cfme_appliance['ip_address'] + "/api/providers",
+        auth=(cfme_appliance['rest_api']['username'],
+              cfme_appliance['rest_api']['password']),
         verify=False
     )
 
@@ -33,14 +78,16 @@ def get_all_provider_ids():
 
 
 def get_all_vm_ids():
-    """Returns an integer list of vm ID's via the REST API"""
+    """
+    Returns an integer list of vm ID's via the REST API
+    """
     logger.debug('Retrieving the list of vm ids')
 
     vm_ids = []
     vm_response = requests.get(
-        url="https://" + cfme_performance['appliance']['ip_address'] + "/api/vms",
-        auth=(cfme_performance['appliance']['rest_api']['username'],
-              cfme_performance['appliance']['rest_api']['password']),
+        url="https://" + cfme_appliance['ip_address'] + "/api/vms",
+        auth=(cfme_appliance['rest_api']['username'],
+              cfme_appliance['rest_api']['password']),
         verify=False
     )
 
@@ -54,14 +101,16 @@ def get_all_vm_ids():
 
 
 def get_all_host_ids():
-    """Returns an integer list of host ID's via the Rest API"""
+    """
+    Returns an integer list of host ID's via the Rest API
+    """
     logger.debug('Retrieving the list of host ids')
 
     host_ids = []
     host_response = requests.get(
-        url="https://" + cfme_performance['appliance']['ip_address'] + "/api/hosts",
-        auth=(cfme_performance['appliance']['rest_api']['username'],
-              cfme_performance['appliance']['rest_api']['password']),
+        url="https://" + cfme_appliance['ip_address'] + "/api/hosts",
+        auth=(cfme_appliance['rest_api']['username'],
+              cfme_appliance['rest_api']['password']),
         verify=False
     )
 
@@ -79,9 +128,9 @@ def get_all_template_ids():
 
     template_ids = []
     template_response = requests.get(
-        url="https://" + cfme_performance['appliance']['ip_address'] + "/api/templates",
-        auth=(cfme_performance['appliance']['rest_api']['username'],
-              cfme_performance['appliance']['rest_api']['password']),
+        url="https://" + cfme_appliance['ip_address'] + "/api/templates",
+        auth=(cfme_appliance['rest_api']['username'],
+              cfme_appliance['rest_api']['password']),
         verify=False
     )
 
@@ -99,10 +148,10 @@ def get_provider_details(provider_id):
 
     details = {}
     response = requests.get(
-        url="https://" + cfme_performance['appliance']['ip_address'] +
+        url="https://" + cfme_appliance['ip_address'] +
             "/api/providers/" + str(provider_id),
-        auth=(cfme_performance['appliance']['rest_api']['username'],
-              cfme_performance['appliance']['rest_api']['password']),
+        auth=(cfme_appliance['rest_api']['username'],
+              cfme_appliance['rest_api']['password']),
         verify=False
     )
     details_json = response.json()
@@ -115,15 +164,18 @@ def get_provider_details(provider_id):
 
 
 def get_vm_details(vm_id):
-    """Returns the name, type, vendor, host_id, and power_state associated with the vm_id"""
+    """
+    Returns the name, type, vendor, host_id, and power_state associated with
+    the vm_id.
+    """
     logger.vdebug('Retrieving the VM details for ID: {}'.format(vm_id))
 
     details = {}
     response = requests.get(
-        url="https://" + cfme_performance['appliance']['ip_address'] +
+        url="https://" + cfme_appliance['ip_address'] +
             "/api/vms/" + str(vm_id),
-        auth=(cfme_performance['appliance']['rest_api']['username'],
-              cfme_performance['appliance']['rest_api']['password']),
+        auth=(cfme_appliance['rest_api']['username'],
+              cfme_appliance['rest_api']['password']),
         verify=False
     )
     details_json = response.json()
@@ -141,15 +193,18 @@ def get_vm_details(vm_id):
 
 
 def get_template_details(template_id):
-    """Returns the name, type, and guid associated with the template_id"""
-    logger.debug('Retrieving the template details for ID: {}'.format(template_id))
+    """
+    Returns the name, type, and guid associated with the template_id
+    """
+    logger.debug('Retrieving the template details for ID: {}'
+                 .format(template_id))
 
     template_details = {}
     template_response = requests.get(
-        url="https://" + cfme_performance['appliance']['ip_address'] +
+        url="https://" + cfme_appliance['ip_address'] +
             "/api/templates/" + str(template_id),
-        auth=(cfme_performance['appliance']['rest_api']['username'],
-              cfme_performance['appliance']['rest_api']['password']),
+        auth=(cfme_appliance['rest_api']['username'],
+              cfme_appliance['rest_api']['password']),
         verify=False
     )
     template_json = template_response.json()
@@ -161,7 +216,9 @@ def get_template_details(template_id):
 
 
 def get_all_template_details():
-    """Returns a dictionary mapping template ids to their name, type, and guid"""
+    """
+    Returns a dictionary mapping template ids to their name, type, and guid
+    """
     all_details = {}
     for id in get_all_template_ids():
         all_details[id] = {}
@@ -170,7 +227,9 @@ def get_all_template_details():
 
 
 def get_provider_id(provider_name):
-    """"Return the ID associated with the specified provider name"""
+    """"
+    Return the ID associated with the specified provider name
+    """
     logger.debug('Retrieving the ID for provider: {}'.format(provider_name))
     for provider_id in get_all_provider_ids():
         details = get_provider_details(provider_id)
@@ -180,7 +239,9 @@ def get_provider_id(provider_name):
 
 
 def get_vm_id(vm_name):
-    """"Return the ID associated with the specified VM name"""
+    """
+    Return the ID associated with the specified VM name
+    """
     logger.debug('Retrieving the ID for VM: {}'.format(vm_name))
     for vm_id in get_all_vm_ids():
         details = get_vm_details(vm_id)
@@ -190,7 +251,9 @@ def get_vm_id(vm_name):
 
 
 def get_vm_ids(vm_names):
-    """Returns a dictionary mapping each VM name to it's id"""
+    """
+    Returns a dictionary mapping each VM name to it's id
+    """
     name_list = vm_names[:]
     logger.debug('Retrieving the IDs for {} VM(s)'.format(len(name_list)))
     id_map = {}
@@ -205,26 +268,32 @@ def get_vm_ids(vm_names):
 
 
 def get_template_guids(template_dict):
-    """Returns a list of tuples. The inner tuples are formated so that each guid is in index 0, and its
-    provider's name is in index 1. Expects a dictionary mapping a provider to its templates"""
+    """
+    Returns a list of tuples. The inner tuples are formated so that each guid
+    is in index 0, and its provider's name is in index 1. Expects a dictionary
+    mapping a provider to its templates
+    """
     result_list = []
     all_template_details = get_all_template_details()
     for provider in template_dict:
-        provider_type = cfme_performance['providers'][provider]['type']
+        provider_type = cfme_providers[provider]['type']
         for template_name in template_dict[provider]:
             inner_tuple = ()
             for id in all_template_details:
+                _tmp = provider_type + '::Template'
                 if ((all_template_details[id]['name'] == template_name) and
-                        (all_template_details[id]['type'] == provider_type + '::Template')):
+                   (all_template_details[id]['type'] == _tmp)):
                     inner_tuple += (all_template_details[id]['guid'],)
-                    inner_tuple += (cfme_performance['providers'][provider]['name'],)
+                    inner_tuple += (cfme_providers[provider]['name'],)
                     result_list.append(inner_tuple)
     return result_list
 
 
 def add_provider(provider):
     """Adds a provider via the REST API."""
-    logger.vdebug('Adding Provider: {}, Type: {}'.format(provider['name'], provider['type']))
+    logger.vdebug('Adding Provider: {}, Type: {}'
+                  .format(provider['name'],
+                          provider['type']))
 
     data_dict = {
         "action": "create",
@@ -241,9 +310,13 @@ def add_provider(provider):
     if 'ip_address' in provider:
         data_dict['resources'][0]['hostname'] = provider['ip_address']
 
-    if (provider['type'] == 'ManageIQ::Providers::Amazon::CloudManager' or
-    provider['type'] == 'ManageIQ::Providers::Google::CloudManager'):
-        data_dict['resources'][0]['provider_region'] = provider['provider_region']
+    types = [
+        'ManageIQ::Providers::Amazon::CloudManager',
+        'ManageIQ::Providers::Google::CloudManager'
+    ]
+    if provider['type'] in types:
+        region = provider['provider_region']
+        data_dict['resources'][0]['provider_region'] = region
 
     if 'metrics_credentials' in provider:
         data_dict['resources'][0]['credentials'].append({
@@ -277,45 +350,54 @@ def add_provider(provider):
         })
 
     json_data = json.dumps(data_dict)
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     response = requests.post("https://" + appliance + "/api/providers",
                              data=json_data,
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)
 
-    logger.debug('Added Provider: {}, Response: {}'.format(provider['name'], response))
+    logger.debug('Added Provider: {}, Response: {}'
+                 .format(provider['name'], response))
 
     # Workaround for Bug: https://bugzilla.redhat.com/show_bug.cgi?id=1351253
     if provider['type'] == "ManageIQ::Providers::Microsoft::InfraManager":
-        logger.debug('Running rails command for Microsoft InfraManager Workaround')
+        msg = 'Running rails command for Microsoft InfraManager Workaround'
+        logger.debug(msg)
         ssh_client = SSHClient()
         command = (
             'm = ExtManagementSystem.find_by_name \'{}\';'
             'attributes = {{:security_protocol => \'{}\'}};'
-            'm.update_authentication(:default => {{:userid => \'{}\', :password => \'{}\'}});'
+            'm.update_authentication(:default => '
+            '{{:userid => \'{}\', :password => \'{}\'}});'
             'm.update_attributes(attributes);'
             'm.save;'
-            'm.authentication_check;'.format(provider['name'], provider['security_protocol'],
-                provider['credentials']['username'].replace('\\', '\\\\'),
-                provider['credentials']['password']))
+            'm.authentication_check;'
+            .format(provider['name'],
+                    provider['security_protocol'],
+                    provider['credentials']['username'].replace('\\', '\\\\'),
+                    provider['credentials']['password']))
         ssh_client.run_rails_console(command, timeout=None, log_less=True)
 
     # Workaround for Bug: https://bugzilla.redhat.com/show_bug.cgi?id=1351253
     if provider['type'] == 'ManageIQ::Providers::Openstack::CloudManager':
-        logger.debug('Running rails command for Openstack CloudManager Workaround')
+        msg = 'Running rails command for Openstack CloudManager Workaround'
+        logger.debug(msg)
         ssh_client = SSHClient()
         command = (
             'e = ExtManagementSystem.find_by_name \'{}\'; '
             'attributes = {{:security_protocol => \'{}\', :port => \'{}\'}}; '
-            'e.update_authentication(:default => {{:userid => \'{}\', :password => \'{}\'}}); '
+            'e.update_authentication(:default => '
+            '{{:userid => \'{}\', :password => \'{}\'}}); '
             'e.update_attributes(attributes); '
             'e.save; '
             'e.authentication_check;'.format(
-                provider['name'], provider['credentials']['security_protocol'],
-                provider['credentials']['port'], provider['credentials']['username'],
+                provider['name'],
+                provider['credentials']['security_protocol'],
+                provider['credentials']['port'],
+                provider['credentials']['username'],
                 provider['credentials']['password']))
         if 'amqp_credentials' in provider:
             default_ip = provider['ip_address']
@@ -323,7 +405,8 @@ def add_provider(provider):
             default_user = provider['credentials']['username']
             default_pass = provider['credentials']['password']
             default_protocol = provider['credentials']['security_protocol']
-            # Optionalize amqp endpoint as separate endpoint if specified in provider definition
+            # Optionalize amqp endpoint as separate endpoint if specified in
+            # provider definition
             if 'ip_address' in provider['amqp_credentials']:
                 amqp_ip = provider['amqp_credentials']['ip_address']
             else:
@@ -332,33 +415,45 @@ def add_provider(provider):
             amqp_user = provider['amqp_credentials']['username']
             amqp_pass = provider['amqp_credentials']['password']
             amqp_protocol = provider['amqp_credentials']['security_protocol']
-            # In order to properly set the connection_configurations, it must first change twice
-            # To do so, we set the userid to FOOBAR, then set it to the correct userid
+            # In order to properly set the connection_configurations,
+            # it must first change twice
+
+            # To do so, we set the userid to FOOBAR,
+            # then set it to the correct userid
             command = (
                 'e = ExtManagementSystem.find_by_name \'{0}\'; '
-                'attributes = {{:security_protocol => \'{5}\', :port => {2}}}; '
-                'e.update_authentication(:default => {{:userid => \'{3}\', :password => \'{4}\'}});'
+                'attributes = {{:security_protocol => \'{5}\', :port => {2}}};'
+                'e.update_authentication(:default => {{:userid => \'{3}\', '
+                ':password => \'{4}\'}});'
                 'e.update_attributes(attributes); '
-                'configurations = [{{:endpoint => {{:role => :default, :hostname => \'{1}\', '
+                'configurations = [{{:endpoint => {{:role => :default, '
+                ':hostname => \'{1}\', '
                 ':port => {2}, :security_protocol => \'{5}\'}}, '
                 ':authentication => {{:role => :default, :userid => \'{3}\', '
                 ':password => \'{4}\', :save => true }}}}, '
-                '{{:endpoint => {{:role => :amqp, :hostname => \'{6}\', :port => {7}, '
-                ':security_protocol => \'{10}\'}}, :authentication => {{:role => :amqp, '
-                ':userid => \'FOOBAR\', :password => \'{9}\', :save => true}}}}]; '
+                '{{:endpoint => {{:role => :amqp, :hostname => \'{6}\', '
+                ':port => {7}, '
+                ':security_protocol => \'{10}\'}}, :authentication => '
+                '{{:role => :amqp, '
+                ':userid => \'FOOBAR\', :password => \'{9}\', '
+                ':save => true}}}}]; '
                 'e.connection_configurations = configurations; '
-                'configurations = [{{:endpoint => {{:role => :default, :hostname => \'{1}\', '
+                'configurations = [{{:endpoint => {{:role => :default, '
+                ':hostname => \'{1}\', '
                 ':port => {2}, :security_protocol => \'{5}\'}}, '
                 ':authentication => {{:role => :default, :userid => \'{3}\', '
                 ':password => \'{4}\', :save => true }}}}, '
-                '{{:endpoint => {{:role => :amqp, :hostname => \'{6}\', :port => {7}, '
-                ':security_protocol => \'{10}\'}}, :authentication => {{:role => :amqp, '
-                ':userid => \'{8}\', :password => \'{9}\', :save => true}}}}]; '
+                '{{:endpoint => {{:role => :amqp, :hostname => \'{6}\', '
+                ':port => {7}, '
+                ':security_protocol => \'{10}\'}}, :authentication => '
+                '{{:role => :amqp, '
+                ':userid => \'{8}\', :password => \'{9}\', :save => true}}}}];'
                 'e.connection_configurations = configurations; '
                 'e.save; '
                 'e.authentication_check;'.format(
-                    provider['name'], default_ip, default_port, default_user, default_pass,
-                    default_protocol, amqp_ip, amqp_port, amqp_user, amqp_pass, amqp_protocol))
+                    provider['name'], default_ip, default_port, default_user,
+                    default_pass, default_protocol, amqp_ip, amqp_port,
+                    amqp_user, amqp_pass, amqp_protocol))
         ssh_client.run_rails_console(command, timeout=None, log_less=True)
 
 
@@ -366,34 +461,40 @@ def add_providers(providers):
     """Adds a provider with one request per provider via the REST API."""
     starttime = time.time()
     for provider in providers:
-        add_provider(cfme_performance['providers'][provider])
-    logger.info('Added Providers in: {}s'.format(round(time.time() - starttime, 2)))
+        add_provider(cfme_providers[provider])
+    logger.info('Added Providers in: {}s'
+                .format(round(time.time() - starttime, 2)))
 
 
 def add_host_credentials(provider, ssh_client):
     """"Adds host credentials to a provider via the REST API"""
     starttime = time.time()
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     p_id = get_provider_id(provider['name'])
     version = get_version()
     if int(version) < 56:
         command = ('p = ExtManagementSystem.find_by_name(\'{}\'); '
-            'for host in p.hosts do; '
-            'host.update_authentication(:default => {{:userid => \'{}\', :password => \'{}\'}});'
-            'host.save; '
-            'end'.format(provider['name'], provider['host_credentials']['username'],
-                provider['host_credentials']['password']))
+                   'for host in p.hosts do; '
+                   'host.update_authentication(:default => '
+                   '{{:userid => \'{}\', :password => \'{}\'}});'
+                   'host.save; '
+                   'end'
+                   .format(provider['name'],
+                           provider['host_credentials']['username'],
+                           provider['host_credentials']['password']))
         ssh_client.run_rails_console(command, timeout=None, log_less=True)
     else:
         response = requests.get(
-            url="https://{}/api/providers/{}?attributes=hosts".format(appliance, p_id),
-            auth=(cfme_performance['appliance']['rest_api']['username'],
-                  cfme_performance['appliance']['rest_api']['password']),
+            url="https://{}/api/providers/{}?attributes=hosts"
+                .format(appliance, p_id),
+            auth=(cfme_appliance['rest_api']['username'],
+                  cfme_appliance['rest_api']['password']),
             verify=False
         )
 
         if response.status_code != 200:
-            logger.warning('Could not get host list, error: {}'.format(response.content))
+            logger.warning('Could not get host list, error: {}'
+                           .format(response.content))
 
         host_list = response.json()['hosts']
         id_list = []
@@ -412,12 +513,15 @@ def add_host_credentials(provider, ssh_client):
 
         json_data = json.dumps(data_dict)
         for host in id_list:
-            response = requests.post("https://" + appliance + "/api/hosts/" + str(host),
+            _username = cfme_appliance['rest_api']['username']
+            _password = cfme_appliance['rest_api']['password']
+            _headers = {"content-type": "application/json"}
+            response = requests.post("https://{}/api/hosts/{}"
+                                     .format(appliance, str(host)),
                                      data=json_data,
-                                     auth=(cfme_performance['appliance']['rest_api']['username'],
-                                           cfme_performance['appliance']['rest_api']['password']),
+                                     auth=(_username, _password),
                                      verify=False,
-                                     headers={"content-type": "application/json"},
+                                     headers=_headers,
                                      allow_redirects=False)
 
             if response.status_code != 200:
@@ -431,11 +535,11 @@ def scan_provider_vm(vm_id):
     """Performs Smart State Analysis on the specified VM via the REST API"""
     logger.vdebug('Scanning VM with ID: {}'.format(vm_id))
 
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     response = requests.post("https://" + appliance + "/api/vms/" + str(vm_id),
                              data=json.dumps({"action": "scan"}),
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)
@@ -453,14 +557,17 @@ def scan_provider_vms(vm_ids):
     for vm in vm_ids:
         scan_provider_vm(vm)
     logger.vdebug('Queued Scan {} VM(s) in: {}s'.format(len(vm_ids),
-        round(time.time() - starttime, 2)))
+                  round(time.time() - starttime, 2)))
 
 
 def scan_provider_vms_bulk(vm_ids):
-    """Performs Smart State Analysis on the specified VMs with one request via the REST API"""
+    """
+    Performs Smart State Analysis on the specified VMs with
+    one request via the REST API.
+    """
     starttime = time.time()
 
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     resources = []
     for vm_id in vm_ids:
         resources.append({
@@ -474,8 +581,8 @@ def scan_provider_vms_bulk(vm_ids):
     data_json = json.dumps(data_dict)
     response = requests.post("https://" + appliance + "/api/vms/",
                              data=data_json,
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)
@@ -484,16 +591,17 @@ def scan_provider_vms_bulk(vm_ids):
         logger.debug(response.text)
 
     logger.vdebug('Queued Scan {} VM(s) in: {}s'.format(len(vm_ids),
-        round(time.time() - starttime, 2)))
+                  round(time.time() - starttime, 2)))
 
 
 def refresh_provider(provider_id):
     """Refresh the specified provider via the REST API"""
-    appliance = cfme_performance['appliance']['ip_address']
-    response = requests.post("https://" + appliance + "/api/providers/" + str(provider_id),
+    appliance = cfme_appliance['ip_address']
+    response = requests.post("https://{}/api/providers/{}"
+                             .format(appliance, str(provider_id)),
                              data=json.dumps({"action": "refresh"}),
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)
@@ -510,14 +618,14 @@ def refresh_providers(provider_ids):
     for provider in provider_ids:
         refresh_provider(provider)
     logger.debug('Queued Refresh {} Provider(s) in: {}s'.format(len(provider_ids),
-        round(time.time() - starttime, 2)))
+                 round(time.time() - starttime, 2)))
 
 
 def refresh_providers_bulk(provider_ids):
     """Refresh the specified providers with one request via the REST API"""
     starttime = time.time()
 
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     resources = []
     for provider_id in provider_ids:
         resources.append({
@@ -531,8 +639,8 @@ def refresh_providers_bulk(provider_ids):
     data_json = json.dumps(data_dict)
     response = requests.post("https://" + appliance + "/api/providers/",
                              data=data_json,
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)
@@ -541,16 +649,16 @@ def refresh_providers_bulk(provider_ids):
         logger.debug(response.text)
 
     logger.debug('Queued Refresh {} Provider(s) in: {}s'.format(len(provider_ids),
-        round(time.time() - starttime, 2)))
+                 round(time.time() - starttime, 2)))
 
 
 def refresh_provider_vm(vm_id):
     """Refresh the specified VM via the REST API"""
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     response = requests.post("https://" + appliance + "/api/vms/" + str(vm_id),
                              data=json.dumps({"action": "refresh"}),
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)
@@ -567,14 +675,14 @@ def refresh_provider_vms(vm_ids):
     for vm in vm_ids:
         refresh_provider_vm(vm)
     logger.debug('Queued Refresh {} VM(s) in: {}s'.format(len(vm_ids),
-        round(time.time() - starttime, 2)))
+                 round(time.time() - starttime, 2)))
 
 
 def refresh_provider_vms_bulk(vm_ids):
     """Refresh the specified VMs with one request via the REST API"""
     starttime = time.time()
 
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     resources = []
     for vm_id in vm_ids:
         resources.append({
@@ -588,8 +696,8 @@ def refresh_provider_vms_bulk(vm_ids):
     data_json = json.dumps(data_dict)
     response = requests.post("https://" + appliance + "/api/vms/",
                              data=data_json,
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)
@@ -598,7 +706,7 @@ def refresh_provider_vms_bulk(vm_ids):
         logger.debug(response.text)
 
     logger.debug('Queued Refresh {} VM(s) in: {}s'.format(len(vm_ids),
-        round(time.time() - starttime, 2)))
+                 round(time.time() - starttime, 2)))
 
 
 def provision_vm(tuple_list):
@@ -642,11 +750,11 @@ def provision_vm(tuple_list):
             })
 
     data_json = json.dumps(data_dict)
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     response = requests.post("https://" + appliance + "/api/provision_requests/",
                              data=data_json,
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)
@@ -654,7 +762,7 @@ def provision_vm(tuple_list):
     if response.status_code != 200:
         logger.debug(response.text)
     logger.debug('Queued Provision VM {} in: {}s'.format(vm_name,
-        round(time.time() - starttime, 2)))
+                 round(time.time() - starttime, 2)))
 
 
 def vm_exists(vm_id):
@@ -678,11 +786,11 @@ def retire_vm(vm_id):
         logger.warning('Attempted to Retire vm {}, which doesn\'t exist'.format(vm_id))
         return False
 
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     response = requests.post("https://" + appliance + "/api/vms/" + str(vm_id),
                              data=json.dumps({"action": "retire"}),
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)
@@ -720,7 +828,7 @@ def retire_provisioned_vms(name_list):
         else:
             vm_ids.append(vm_ids.pop(0))
     logger.debug('Queued retire for {} provisioned VM(s) in {}s'.format(len(name_list),
-        round(time.time() - starttime, 2)))
+                 round(time.time() - starttime, 2)))
 
 
 def get_vm_provider(vm_name):
@@ -752,7 +860,7 @@ def delete_provisioned_vm(vm_tuple):
     a VM name in index 0, and its provider in index 1. Returns True if successful"""
     vm_name, provider_name = vm_tuple
     logger.debug('Cleaning up: {}'.format(vm_name))
-    provider_details = (cfme_performance['providers'][provider_name])
+    provider_details = (cfme_providers[provider_name])
     provider = get_mgmt_provider_class(provider_details)
     try:
         provider.delete_vm(vm_name)
@@ -775,18 +883,18 @@ def delete_provisioned_vms(provision_order):
             provision_order.remove(vm_tuple)
 
     logger.debug('Deleted {} VMs in: {}s'.format(startsize - len(provision_order),
-        round(time.time() - starttime, 2)))
+                 round(time.time() - starttime, 2)))
 
 
 def shutdown_vm_guest(vm_id):
     """Shut down the specified VM  via the REST API"""
     logger.vdebug('Shutting down guest VM with ID: {}'.format(vm_id))
 
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     response = requests.post("https://" + appliance + "/api/vms/" + str(vm_id),
                              data=json.dumps({"action": "shutdown_guest"}),
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)
@@ -801,11 +909,11 @@ def reboot_vm_guest(vm_id):
     """Reboot the specified VM  via the REST API"""
     logger.vdebug('Rebooting guest VM with ID: {}'.format(vm_id))
 
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     response = requests.post("https://" + appliance + "/api/vms/" + str(vm_id),
                              data=json.dumps({"action": "reboot_guest"}),
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)
@@ -820,11 +928,11 @@ def start_vm(vm_id):
     """Start the specified VM  via the REST API"""
     logger.vdebug('Starting VM with ID: {}'.format(vm_id))
 
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     response = requests.post("https://" + appliance + "/api/vms/" + str(vm_id),
                              data=json.dumps({"action": "start"}),
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)
@@ -839,11 +947,11 @@ def stop_vm(vm_id):
     """Stop the specified VM  via the REST API"""
     logger.vdebug('Stopping VM with ID: {}'.format(vm_id))
 
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     response = requests.post("https://" + appliance + "/api/vms/" + str(vm_id),
                              data=json.dumps({"action": "stop"}),
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)
@@ -858,11 +966,11 @@ def suspend_vm(vm_id):
     """Suspend the specified VM  via the REST API"""
     logger.vdebug('Suspending VM with ID: {}'.format(vm_id))
 
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     response = requests.post("https://" + appliance + "/api/vms/" + str(vm_id),
                              data=json.dumps({"action": "suspend"}),
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)
@@ -919,7 +1027,7 @@ def map_vms_to_ids(provider_names_to_vm_names):
                         logger.debug('Matching {} to vm id: {}'.format(vm_name, vm_id))
                         vm_ids.append(vm_id)
                         del (provider_ids_to_vm_names_copy[provider_id]
-                            [provider_ids_to_vm_names_copy[provider_id].index(vm_name)])
+                             [provider_ids_to_vm_names_copy[provider_id].index(vm_name)])
                         break
         if (sum(len(x) for x in provider_ids_to_vm_names_copy.itervalues()) == 0):
             break
@@ -939,11 +1047,11 @@ def reset_vm(vm_id):
     """Reset the specified VM via the REST API"""
     logger.vdebug('Reseting VM with ID: {}'.format(vm_id))
 
-    appliance = cfme_performance['appliance']['ip_address']
+    appliance = cfme_appliance['ip_address']
     response = requests.post("https://" + appliance + "/api/vms/" + str(vm_id),
                              data=json.dumps({"action": "reset"}),
-                             auth=(cfme_performance['appliance']['rest_api']['username'],
-                                   cfme_performance['appliance']['rest_api']['password']),
+                             auth=(cfme_appliance['rest_api']['username'],
+                                   cfme_appliance['rest_api']['password']),
                              verify=False,
                              headers={"content-type": "application/json"},
                              allow_redirects=False)

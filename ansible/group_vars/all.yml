@@ -119,6 +119,8 @@ db_dumps:
   dump1: http://download.example.com/dbdumps/dump.r0000.cpgd
   dump2: http://download.example.com/dbdumps/dump.r0001.dmp
 
+# fixes user priviliges issue on dbdump
+pchown_script: https://raw.githubusercontent.com/kbrock/bin/master/pchown
 
 ###############################
 # Repos

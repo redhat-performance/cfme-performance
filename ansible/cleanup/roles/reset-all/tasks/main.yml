@@ -17,11 +17,23 @@
 - name: Drop FS caches
   shell: sync; sync; echo 3 > /proc/sys/vm/drop_caches
 
-- name: Restart Postgres
-  service: name=rh-postgresql94-postgresql state=restarted
+- name: Restart Postgres (5.4.x appliances)
+  service: name=rh-postgresql92-postgresql state=restarted
+  when: is54
 
+- name: Restart Postgres (5.5.x and 5.6.x appliances)
+  service: name=rh-postgresql94-postgresql state=restarted
+  when: is55 or is56
+
+- name: Restart Postgres (5.7.x appliances)
+  service: name=rh-postgresql95-postgresql state=restarted
+  when: is57
+
+# For (5.{4,5,6}.x appliances). Rubyrep was removed in 57x for which,
+# pglogical now handles replication. http://manageiq.org/blog/2016/08/last-week-in-manageiq-saying-goodbye-to-rubyrep/
 - name: Remove replication
   shell: "cd /var/www/miq/vmdb; bin/rake evm:dbsync:local_uninstall"
+  when: is54 or is55 or is56
 
 - name: Reset database
   shell: "cd /var/www/miq/vmdb; DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bin/rake evm:db:reset"

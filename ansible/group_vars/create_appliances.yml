@@ -1,65 +1,76 @@
 ---
+
 ###############################
 # CFME Workload and Worker Appliances to Create
 ###############################
+
 cfme_appliances:
-  - vm_name: CF-R0000-DB-Workload-56012
-    template: cloudforms-4.1-template
-    clone_template: True
-    cluster: Linux-Cluster
-    disk_location: vmstorage
-    disks:
-      vmdb:
-        size: 20 # in GB
-        interface: virtio
-        format: cow
-        location: vmstorage
-        allocation: thin
-    NICS:
-      - rhevm
-    cpus: 4
-    cores: 4
-    memory_size: 16 # in GB
-    host: supercomputer_1
-    vm_type: server
-    migrate: user_migratable
-  - vm_name: CF-R0000-DB-Workload-5.5.5.2
-    template: cloudforms-4.0-template
-    clone_template: False
-    cluster: Default
-    disk_location: vmstorage
-    disks: []
-    NICS: []
-    cpus: 4
-    cores: 4
-    memory_size: 16 # in GB
-    host: perf-test-01
-    vm_type: server
-    migrate: migratable
-  - vm_name: CF-R0000-5552-Worker-01
-    template: cloudforms-4.0-template
-    clone_template: False
-    cluster: Default
-    disk_location: vmstorage
-    disks:
-      vmdb:
-        size: 20 # in GB
-        interface: virtio
-        format: cow
-        location: vmstorage
-        allocation: thin
-      vmdb2:
-        size: 20 # in GB
-        interface: virtio
-        format: cow
-        location: vmstorage
-        allocation: clone
-    NICS:
-      - rhevm
-      - ovirtmgmt
-    cpus: 4
-    cores: 4
-    memory_size: 16 # in GB
-    host: perf-test-01
-    vm_type: desktop
-    migrate: pinned
+  multiple:
+    - vms:
+      - vm_name: CF-R0000-DB-Workload-55013-2
+        template: cloudforms-4.1-template
+      - vm_name: CF-R0000-DB-Workload-5554-1
+        template: cloudforms-4.1-template
+      - vm_name: CF-R0000-DB-Workload-56013-1
+        template: cloudforms-4.1-template
+      clone_template: True
+      cluster: Linux-Cluster
+      disk_location: vmstorage
+      disks:
+        vmdb:
+          size: 20 # in GB
+          interface: virtio
+          format: cow
+          location: vmstorage
+          allocation: thin
+      NICS:
+        - rhevm
+      cpus: 4
+      cores: 4
+      memory_size: 16 # in GB
+      host: supercomputer 1
+      vm_type: server
+      migrate: user migratable
+
+  single:
+    - vm_name: CF-R0000-DB-Workload-5.5.5.2
+      template: cloudforms-4.0-template
+      clone_template: False
+      cluster: Default
+      disk_location: vmstorage
+      disks: []
+      NICS: []
+      cpus: 4
+      cores: 4
+      memory_size: 16 # in GB
+      host: perf-test-01
+      vm_type: server
+      migrate: migratable
+
+    - vm_name: CF-R0000-5552-Worker-01
+      template: cloudforms-4.0-template
+      clone_template: False
+      cluster: Default
+      disk_location: vmstorage
+      disks:
+        vmdb:
+          size: 20 # in GB
+          interface: virtio
+          format: cow
+          location: vmstorage
+          allocation: thin
+        vmdb2:
+          size: 20 # in GB
+          interface: virtio
+          format: cow
+          location: vmstorage
+          allocation: clone
+      NICS:
+        - rhevm
+        - ovirtmgmt
+      cpus: 4
+      cores: 4
+      memory_size: 16 # in GB
+      host: perf-test-01
+      vm_type: desktop
+      migrate: pinned

@@ -2,14 +2,17 @@
 A repo with the goal to provide end-to-end CFME/ManageIQ performance analysis and testing. Browse each folder for more details on how to install, configure, and run each playbook/workload.
 
 ## Installing for Testing
+
 ```shell
+
 # virtualenv cfme-performance
 # cd cfme-performance
 # . bin/activate
-# git clone https://github.com/akrzos/cfme-performance.git
+# git clone https://github.com/redhat-performance/cfme-performance.git
 # cd cfme-performance
 # pip install -Ur requirements.txt
 ```
+
 *Note there are several rpms you may have to install depending on what is already installed in your environment.*
 
 

@@ -3,7 +3,8 @@
 # Playbook to upload CFME/Miq Grafana Performance Dashboards to Grafana host
 #
 
-- hosts: localhost
+# - hosts: localhost
+- hosts: monitorhost
   gather_facts: false
   vars:
     ansible_connection: local
