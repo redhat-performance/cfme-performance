@@ -36,7 +36,7 @@
   service: name={{item}} state=stopped
   with_items:
     - evmserverd
-    # - collectd
+    - collectd
   ignore_errors: true
 
 - name: Restart postgresql service to terminate previous users/sessions
@@ -49,8 +49,20 @@
 
 - name: Drop existing database
   command: dropdb vmdb_production
-  ignore_errors: true
 
+# TODO: download script to drop all db sessions
+# if they're still up after restarting postgresql
+
+# - name: Drop existing database
+#   command: /root/pkillall && dropdb vmdb_production
+#   ignore_errors: true
+
+# - name: Get pkillall script to terminate connections to vmdb_production
+#   get_url:
+#     url: "{{pkillall_script}}"
+#     dest: "/root/pkillall"
+#     mode: u+rwx
+#
 - name: Create new database
   command: createdb vmdb_production
 
@@ -90,5 +102,5 @@
   service: name={{item}} state=started
   with_items:
     - evmserverd
-    # - collectd
+    - collectd
   ignore_errors: true
