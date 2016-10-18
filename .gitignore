@@ -27,7 +27,7 @@ cfme-performance/log/*.log
 # Virtual Environment
 .cfme_performance
 .cfme-performance
-
+.cfme_perf
 # Python files
 *.py[cod]
 

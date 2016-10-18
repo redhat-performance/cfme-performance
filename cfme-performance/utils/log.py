@@ -1,4 +1,6 @@
-"""Framework for the logger and provides additional verbose debug logging."""
+"""
+Framework for the logger and provides additional verbose debug logging.
+"""
 from utils.conf import cfme_performance
 from utils.path import get_rel_path, log_path
 import logging
@@ -58,7 +60,8 @@ def format_marker(mstring, mark="-"):
         # Pad with spaces
         mstring = ' {} '.format(mstring)
         # Format centered, surrounded the leader_mark
-        format_spec = '{{:{leader_mark}^{marker_len}}}'.format(leader_mark=mark,
+        format_spec = '{{:{leader_mark}^{marker_len}}}'.format(
+            leader_mark=mark,
             marker_len=MARKER_LEN)
         mstring = format_spec.format(mstring)
     return mstring

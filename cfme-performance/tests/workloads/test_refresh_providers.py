@@ -21,8 +21,10 @@ import pytest
 @pytest.mark.usefixtures('generate_version_files')
 @pytest.mark.parametrize('scenario', get_refresh_providers_scenarios())
 def test_refresh_providers(request, scenario):
-    """Refreshes providers then waits for a specific amount of time. Memory Monitor creates graphs
-    and summary at the end of the scenario."""
+    """
+    Refreshes providers then waits for a specific amount of time.
+    Memory Monitor creates graphs and summary at the end of the scenario.
+    """
     from_ts = int(time.time() * 1000)
     ssh_client = SSHClient()
     logger.debug('Scenario: {}'.format(scenario['name']))
@@ -30,12 +32,14 @@ def test_refresh_providers(request, scenario):
     clean_appliance(ssh_client)
 
     quantifiers = {}
-    scenario_data = {'appliance_ip': cfme_performance['appliance']['ip_address'],
+    scenario_data = {
+        'appliance_ip': cfme_performance['appliance']['ip_address'],
         'appliance_name': cfme_performance['appliance']['appliance_name'],
         'test_dir': 'workload-refresh-providers',
         'test_name': 'Refresh Providers',
         'appliance_roles': get_server_roles_workload_refresh_providers(separator=', '),
-        'scenario': scenario}
+        'scenario': scenario
+    }
     monitor_thread = SmemMemoryMonitor(SSHClient(), scenario_data)
 
     def cleanup_workload(scenario, from_ts, quantifiers, scenario_data):
@@ -49,8 +53,9 @@ def test_refresh_providers(request, scenario):
         add_workload_quantifiers(quantifiers, scenario_data)
         timediff = time.time() - starttime
         logger.info('Finished cleaning up monitoring thread in {}'.format(timediff))
-    request.addfinalizer(lambda: cleanup_workload(scenario, from_ts, quantifiers, scenario_data))
 
+    request.addfinalizer(lambda: cleanup_workload(scenario, from_ts,
+                                                  quantifiers, scenario_data))
     monitor_thread.start()
 
     wait_for_miq_server_workers_started(poll_interval=2)
@@ -84,7 +89,7 @@ def test_refresh_providers(request, scenario):
                 time.sleep(wait_diff)
         else:
             logger.warn('Time to Queue Refreshes ({}) exceeded time between '
-                '({})'.format(refresh_time, time_between_refresh))
+                        '({})'.format(refresh_time, time_between_refresh))
 
     quantifiers['Elapsed_Time'] = round(time.time() - starttime, 2)
     quantifiers['Queued_Provider_Refreshes'] = total_refreshed_providers

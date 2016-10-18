@@ -10,11 +10,26 @@
     dest: "/opt/rh/postgresql92/root/var/lib/pgsql/data/{{appliances[inventory_hostname].dbdump}}"
   when: is54
 
-# 5.5 appliances have ~1GiB in the /tmp directory, thus most database exports will fill the
+# 5.5+ appliances have ~1GiB in the /tmp directory, thus most database exports will fill the
 # tmp partition and we must rely on wget rather than the ansible get_url module
 - name: Get database dump (5.5.x appliances)
   shell: "wget {{db_dumps[appliances[inventory_hostname].dbdump]}} -O /var/opt/rh/rh-postgresql94/lib/pgsql/data/{{appliances[inventory_hostname].dbdump}}"
   when: is55
+
+- name: Get database dump (5.6.x appliances)
+  shell: "wget {{db_dumps[appliances[inventory_hostname].dbdump]}} -O /var/opt/rh/rh-postgresql94/lib/pgsql/data/{{appliances[inventory_hostname].dbdump}}"
+  when: is56
+
+- name: Get database dump (5.7.x appliances)
+  shell: "wget {{db_dumps[appliances[inventory_hostname].dbdump]}} -O /var/opt/rh/rh-postgresql95/lib/pgsql/data/{{appliances[inventory_hostname].dbdump}}"
+  when: is57
+
+# download script to fix user priviliges in postgresql, post dbdump import
+- name: Get pchown script to fix db dump
+  get_url:
+    url: "{{pchown_script}}"
+    dest: "/root/pchown"
+    mode: u+rwx
 
 # Ignore_errors since appliances might not have collectd
 - name: Stop CFME/Miq Services
@@ -24,25 +39,60 @@
     - collectd
   ignore_errors: true
 
+- name: Restart postgresql service to terminate previous users/sessions
+  service: name=rh-postgresql94-postgresql state=restarted
+  when: is55 or is56
+
+- name: Restart postgresql service to terminate previous users/sessions
+  service: name=rh-postgresql95-postgresql state=restarted
+  when: is57
+
 - name: Drop existing database
   command: dropdb vmdb_production
 
+# TODO: download script to drop all db sessions
+# if they're still up after restarting postgresql
+
+# - name: Drop existing database
+#   command: /root/pkillall && dropdb vmdb_production
+#   ignore_errors: true
+
+# - name: Get pkillall script to terminate connections to vmdb_production
+#   get_url:
+#     url: "{{pkillall_script}}"
+#     dest: "/root/pkillall"
+#     mode: u+rwx
+#
 - name: Create new database
   command: createdb vmdb_production
 
+# - name: Create role 'cloudforms'
+#   command: createuser cloudforms
+
 - name: Import database (5.4.x appliances)
-  command: "pg_restore --dbname=vmdb_production /opt/rh/postgresql92/root/var/lib/pgsql/data/{{appliances[inventory_hostname].dbdump}}"
+  command: "pg_restore -c -C -v -U root --dbname=vmdb_production -j 6 /opt/rh/postgresql92/root/var/lib/pgsql/data/{{appliances[inventory_hostname].dbdump}}"
   when: is54
+  ignore_errors: true
 
-- name: Import database (5.5.x appliances)
-  command: "pg_restore --dbname=vmdb_production /var/opt/rh/rh-postgresql94/lib/pgsql/data/{{appliances[inventory_hostname].dbdump}}"
-  when: is55
+- name: Import database (5.5.x and 5.6.x appliances)
+  command: "pg_restore -c -C -v -U root --dbname=vmdb_production -j 6 /var/opt/rh/rh-postgresql94/lib/pgsql/data/{{appliances[inventory_hostname].dbdump}}"
+  when: is55 or is56
+  ignore_errors: true
 
-- name: Invalidate all passwords since the v2_key is now different
-  shell: "cd /var/www/miq/vmdb/; bundle exec tools/fix_auth.rb --v2 --invalid bogus"
+- name: Import database (5.7.x appliances)
+  command: "pg_restore -c -C -v -U root --dbname=vmdb_production -j 6 /var/opt/rh/rh-postgresql95/lib/pgsql/data/{{appliances[inventory_hostname].dbdump}}"
+  when: is57
+  ignore_errors: true
+
+- name: Run pchown to handle table ownership issues
+  command: "/root/pchown -u root vmdb_production"
+  ignore_errors: true
 
 - name: Run rake db:migrate
   shell: "cd /var/www/miq/vmdb/; bin/rake db:migrate"
+
+- name: Invalidate all passwords since the v2_key is now different
+  shell: "cd /var/www/miq/vmdb/; bundle exec tools/fix_auth.rb --v2 --invalid bogus"
 
 - name: Run rake evm:automate:reset
   shell: "cd /var/www/miq/vmdb/; bin/rake evm:automate:reset"
