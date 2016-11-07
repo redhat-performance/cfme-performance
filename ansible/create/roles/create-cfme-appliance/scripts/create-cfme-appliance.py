@@ -17,8 +17,7 @@ MB = 1024 * 1024
 GB = 1024 * MB
 
 ca = '/tmp/rhevm_appliance_certs/{}'.format(rhevm_hostname)
-rhevm_url = 'https://{}'.format(rhevm_hostname)
-
+rhevm_url = 'https://{}/ovirt-engine/api'.format(rhevm_hostname)
 api = API(url=rhevm_url, username=user, password=passw, ca_file=ca)
 
 
@@ -115,7 +114,7 @@ def trigger_add_vm(**kwargs):
 
     for i in range(len(appliance_nics)):
         network_name = params.Network(name=appliance_nics[i])
-        nic_name = params.NIC(name='card{}'.format(i), network=network_name)
+        nic_name = params.NIC(name='nic{}'.format(i + 1), network=network_name)
         cfme_appliance.nics.add(nic=nic_name)
 
     while locked_disks(cfme_appliance):
@@ -124,6 +123,22 @@ def trigger_add_vm(**kwargs):
 
     dev = params.Boot(dev='network')
     cfme_appliance.os.boot.append(dev)
+    # boot_params = {
+    #     # "ks": "http://<satellite-server>/ks",
+    #     #    "ksdevice": boot_if,
+    #     #    "dns": "1.2.3.4,1.2.3.5",
+    #     #    "ip": "10.9.8.7",
+    #     #    "netmask": "255.255.255.0",
+    #     #    "gateway": "10.9.8.1",
+    #     "hostname": "{0}.my.domain".format(VM_NAME)
+    # }
+    # cmdline = " ".join(map("{0[0]}={0[1]}".format, boot_params.iteritems()))
+    # cfme_appliance.set_os(params.OperatingSystem(
+    #     # kernel="iso://vmlinuz",
+    #     # initrd="iso://initrd.img",
+    #     cmdline=cmdline)
+    # )
+
     cfme_appliance.update()
 
     for disk in cfme_appliance.disks.list():

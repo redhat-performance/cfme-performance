@@ -5,10 +5,12 @@ autopage = True
 [ovirt-shell]
 username = {{rhevm_username}}
 password = {{rhevm_password}}
+renew_session = False
 timeout = None
 extended_prompt = False
-url = https://localhost:443/api
+url = https://localhost/ovirt-engine/api
 insecure = True
+kerberos = False
 filter = False
 session_timeout = None
 ca_file = None

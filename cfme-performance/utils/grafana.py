@@ -14,12 +14,13 @@ def get_scenario_dashboard_urls(scenario, from_ts, to_ts, output_to_log=True):
         grafana_urls = {}
         if 'grafana_dashboard' in scenario:
             dashboard_name = scenario['grafana_dashboard']
-        grafana_urls['appliance'] = 'http://{}:{}/dashboard/db/{}?from={}&to={}&var-Node={}'.format(g_ip,
-            g_port, dashboard_name, from_ts, to_ts, appliance_name)
+        stub = 'http://{}:{}/dashboard/db/{}?from={}&to={}&var-Node={}'
+        grafana_urls['appliance'] = stub.format(g_ip, g_port, dashboard_name,
+                                                from_ts, to_ts, appliance_name)
         if 'replication_master' in scenario:
             grafana_urls['replication_master'] = \
-                'http://{}:{}/dashboard/db/{}?from={}&to={}&var-Node={}'.format(g_ip, g_port,
-                dashboard_name, from_ts, to_ts, scenario['replication_master']['appliance_name'])
+                stub.format(g_ip, g_port, dashboard_name, from_ts, to_ts,
+                            scenario['replication_master']['appliance_name'])
         if output_to_log:
             logger.info('Grafana URLs: {}'.format(grafana_urls))
         return grafana_urls

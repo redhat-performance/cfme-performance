@@ -11,6 +11,6 @@
 
 
 - name: get ca.crt for rhevm host appliance
-  shell: wget "{{ rhevm_host }}"/ca.crt --no-check-certificate; mv ca.crt /tmp/rhevm_appliance_certs/{{ rhevm_host }}
+  shell: wget "{{ rhevm_host }}/ovirt-engine/services/pki-resource?resource=ca-certificate&format=X509-PEM-CA" --no-check-certificate -O ca.crt; mv ca.crt /tmp/rhevm_appliance_certs/{{ rhevm_host }}
   args:
     creates: /tmp/rhevm_appliance_certs/{{ rhevm_host }}
