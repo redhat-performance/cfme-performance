@@ -20,6 +20,7 @@ ansible/group_vars/create_appliances.local.yml
 # Performance Tests yaml config files
 !cfme-performance/conf/*.yml
 cfme-performance/conf/*.local.yml
+cfme-performance/conf/*.local.*.yml
 
 # Log Files
 cfme-performance/log/*.log
@@ -37,3 +38,7 @@ cfme-performance/log/*.log
 # Editor files
 # Swap files
 *.sw[po]
+
+# Others
+*~
+*.bkup
