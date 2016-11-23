@@ -9,7 +9,7 @@ fi
 
 date +"%Y-%m-%d %H:%M:%S,%3N" >> $logfile
 
-infra_and_master_nodes=('192.1.21.206' '192.1.21.207' '192.1.21.208' '192.1.21.213' '192.1.21.214' '192.1.21.219')
+infra_and_master_nodes=('192.1.23.66' '192.1.23.67' '192.1.23.68' '192.1.23.73' '192.1.23.74' '192.1.23.100')
 exclude_pattern="($(echo ${infra_and_master_nodes[@]} | tr ' ' '|'))"
 
 # get all non-master nodes excluding $NODE_TYPE

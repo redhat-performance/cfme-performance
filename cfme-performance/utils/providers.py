@@ -349,6 +349,12 @@ def add_provider(provider):
             "auth_type": "ssh_keypair"
         })
 
+    #  auth_key
+    if provider['type'] == "ManageIQ::Providers::OpenshiftEnterprise::ContainerManager":
+        msg = 'Adding token for OSE'
+        # not sure about adding hawkular yet.
+        data_dict['resources'][0]['credentials']['auth_key'] = provider['credentials']['token']
+
     json_data = json.dumps(data_dict)
     appliance = cfme_appliance['ip_address']
     response = requests.post("https://" + appliance + "/api/providers",
