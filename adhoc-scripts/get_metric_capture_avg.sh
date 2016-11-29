@@ -14,9 +14,9 @@ cd /var/www/miq/vmdb/log/
 
 if [[ $* -eq 0 ]]; then
   logfile='perf_capture_timer_last_avg.log'
-  last_events=20
-  log_start='2016-11-24T23:36'
-  log_end='2016-11-25T00:34'
+  last_events=100
+  log_start='2016-11-29T00:30'
+  log_end='2016-11-29T06:16'
   ems_event_id='Metric::Capture.perf_capture_timer'
 fi
 
@@ -39,12 +39,18 @@ ids=(`echo "$log_frag" | egrep '('$ems_event_id')' |  grep ready | \
                    grep MiqQueue.put\) | grep -oE '(Message id: \[[0-9]*\])' | \
                    sed 's/Message id: \[//' | sed 's/.\{1\}$//' | tail -n $last_events`)
 
+echo "${#ids[@]} IDs found.." >> ~/$logfile
+
 timings=()
 timestamps=()
 for current_id in ${ids[@]}; do
-  matched=`echo "$log_frag" | grep -oE '.*(Message id: \['$current_id'\].*Delivered in \[[0-9]*.[0-9]*\])'`
-  timings+=(`echo "$matched" | sed 's/.*Delivered in \[//' | sed 's/.\{1\}$//'`)
-  timestamps+=(`echo $matched | awk -F'[]]|[[]| ' '{print $6}'`)
+  matched=`echo "$log_frag" | grep -oE '.*(Message id: \['$current_id'\].*\[ok\].*Delivered in \[[0-9]*.[0-9]*\])'`
+  if [[ ! -z $matched ]]; then
+    timings+=(`echo "$matched" | sed 's/.*Delivered in \[//' | sed 's/.\{1\}$//'`)
+    timestamps+=(`echo $matched | awk -F'[]]|[[]| ' '{print $6}'`)
+  else
+    echo "Couldn't find match for id: $current_id" >> ~/$logfile
+  fi
 done
 
 echo >> ~/$logfile
