@@ -76,6 +76,8 @@ fi
 printf "Average: $average\n" >> ~/$logfile
 printf "%0.s-" {1..70} >> ~/$logfile
 echo >> ~/$logfile
+echo "${#ids[@]} events were queued, out of which ${#timings[@]} events were delivered with [ok] status..." >> ~/$logfile
+
 echo "showing output from log file: ~/$logfile:"
 cat ~/$logfile
 cd ~

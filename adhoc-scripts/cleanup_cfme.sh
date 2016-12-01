@@ -5,26 +5,28 @@
 
 start=`date +"%Y-%m-%d %H:%M:%S,%3N"`
 
-service evmserverd stop
+systemctl stop miqtop miqvmstat httpd evmserverd collectd
 
 sync; sync; echo 3 > /proc/sys/vm/drop_caches
 
-service collectd stop
-service rh-postgresql94-postgresql restart
+systemctl restart rh-postgresql94-postgresql
 
-# evm:dbsync:local_uninstall
+cd /var/www/miq/vmdb; bin/rake evm:dbsync:local_uninstall
 
-# 5.6 requires DISABLE_DATABASE_ENVIRONMENT_CHECK=1
-# cd /var/www/miq/vmdb;DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bin/rake evm:db:reset
-# db:seed
+cd /var/www/miq/vmdb; DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bin/rake evm:db:reset
 
-service collectd start
+cd /var/www/miq/vmdb; bin/rake db:seed
 
 # Work around for https://bugzilla.redhat.com/show_bug.cgi?id=1337525
 service httpd stop
 rm -rf /run/httpd/*
 
-service evmserverd start
+rm -rf /var/www/miq/vmdb/log/*.log*
+rm -rf /var/www/miq/vmdb/log/apache/*.log*
+
+systemctl start miqtop miqvmstat httpd evmserverd collectd
+
+systemctl status miqtop miqvmstat httpd evmserverd collectd
 
 end=`date +"%Y-%m-%d %H:%M:%S,%3N"`
 
