@@ -357,13 +357,25 @@ def add_provider(provider):
 
     json_data = json.dumps(data_dict)
     appliance = cfme_appliance['ip_address']
-    response = requests.post("https://" + appliance + "/api/providers",
-                             data=json_data,
-                             auth=(cfme_appliance['rest_api']['username'],
-                                   cfme_appliance['rest_api']['password']),
-                             verify=False,
-                             headers={"content-type": "application/json"},
-                             allow_redirects=False)
+
+    def call_request():
+        response = requests.post("https://" + appliance + "/api/providers",
+                                 data=json_data,
+                                 auth=(cfme_appliance['rest_api']['username'],
+                                       cfme_appliance['rest_api']['password']),
+                                 verify=False,
+                                 headers={"content-type": "application/json"},
+                                 allow_redirects=True)
+                                #  allow_redirects=False)
+        return response
+
+    # import pdb; pdb.set_trace()
+    try:
+        response = call_request()
+    except:
+        logger.warning('Waiting for httpd server / provider to come back up')
+        time.sleep(10)
+        response = call_request()
 
     logger.debug('Added Provider: {}, Response: {}'
                  .format(provider['name'], response))
