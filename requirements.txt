@@ -12,3 +12,4 @@ mgmtsystem>0.0.15
 # mgmtsystem==1.2.19
 diaper==1.3
 ovirt-engine-sdk-python<4.0.0
+yaycl-crypt==0.2.0

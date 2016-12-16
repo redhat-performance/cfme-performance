@@ -10,4 +10,8 @@ yaycl_options = {
     'extension': '.yml'
 }
 
+crypt_key_file = base_dir.join('.yaml_key')
+if crypt_key_file.exists():
+    yaycl_options['crypt_key_file'] = crypt_key_file.strpath
+
 sys.modules[__name__] = Config(**yaycl_options)
