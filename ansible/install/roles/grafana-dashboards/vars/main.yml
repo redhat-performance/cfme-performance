@@ -834,6 +834,88 @@ per_process_panels:
       processes:
         - "OpenshiftEnterprise::ContainerManager::MetricsCollectorWorker"
 
+  CFME-OSE:
+    - name: "Summerized"
+      processes:
+        - ruby
+        - postgres
+        - httpd
+    - name: "Memcached"
+      processes:
+        - memcached
+    - name: "collectd"
+      processes:
+        - collectd
+    - name: "Appliance"
+      processes:
+        - MIQServer
+        - evm_server.rb
+        - evm_watchdog.rb
+        - appliance_console.rb
+    - name: "Postgres"
+      processes:
+        - PostgresMaster
+        - PostgresLogger
+        - PostgresCheckpoint
+        - PostgresWriter
+        - PostgresWALWriter
+        - PostgresAutovacuum
+        - PostgresStats
+        - PostgresPgLogical
+        - PostgresServers
+    - name: "Statsd"
+      processes:
+        - statsd        
+    - name: "MiqGenericWorker"
+      processes:
+        - MiqGenericWorker
+    - name: "MiqPriorityWorker"
+      processes:
+        - MiqPriorityWorker
+    - name: "MiqScheduleWorker"
+      processes:
+        - MiqScheduleWorker
+    - name: "MiqUiWorker"
+      processes:
+        - MiqUiWorker
+        - PumaMiqUiWorker
+    - name: "MiqWebServiceWorker"
+      processes:
+        - MiqWebServiceWorker
+        - PumaMiqWebServiceWorker
+        - PumaMiqWebSocketsWorker
+    - name: "MiqReportingWorker"
+      processes:
+        - MiqReportingWorker
+    - name: "MiqEventHandler"
+      processes:
+        - MiqEventHandler
+    - name: "MiqSmartProxyWorker"
+      processes:
+        - MiqSmartProxyWorker
+    - name: "MiqReplicationWorker"
+      processes:
+        - MiqReplicationWorker
+        - "evm:dbsync:replicate"
+    - name: "MiqEmsMetricsProcessorWorker"
+      processes:
+        - MiqEmsMetricsProcessorWorker
+    # Refresh Workers:
+    - name: "Hawkular::MiddlewareManager::RefreshWorker"
+      processes:
+        - "Hawkular::MiddlewareManager::RefreshWorker"
+    - name: "OpenshiftEnterprise::ContainerManager::RefreshWorker"
+      processes:
+        - "OpenshiftEnterprise::ContainerManager::RefreshWorker"
+    # Event Catchers:
+    - name: "OpenshiftEnterprise::ContainerManager::EventCatcher"
+      processes:
+        - "OpenshiftEnterprise::ContainerManager::EventCatcher"
+    # Metrics Collector Workers
+    - name: "OpenshiftEnterprise::ContainerManager::MetricsCollectorWorker"
+      processes:
+        - "OpenshiftEnterprise::ContainerManager::MetricsCollectorWorker"
+
   CFME-Microsoft:
     - name: "Summerized"
       processes:

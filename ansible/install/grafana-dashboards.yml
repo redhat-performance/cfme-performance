@@ -70,6 +70,10 @@
         process_list_name: MonitorHost
         dashboard_name: MonitorHost System Performance
 
+      - template_name: openshift_enterprise_system_performance_with_statsd
+        process_list_name: CFME-OSE
+        dashboard_name: ManageIQ Scale Openshift Enterprise System Performance with Statsd
+
   vars_files:
     - ../group_vars/all.yml
     - ../group_vars/all.local.yml

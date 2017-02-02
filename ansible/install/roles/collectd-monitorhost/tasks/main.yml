@@ -19,7 +19,7 @@
     # - collectd-turbostat
     - libsemanage-python
     - policycoreutils-python
-    - policycoreutils-python-utils
+    # - policycoreutils-python-utils
 
 - name: Configure collectd.conf
   template:

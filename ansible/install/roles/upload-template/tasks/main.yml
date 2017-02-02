@@ -3,9 +3,9 @@
 # Upload CFME/Miq appliance into RHEVM datastore
 #
 
-- name: Ensure /etc/rhevm/imageuploader.conf is configured with the password
+- name: Ensure /etc/ovirt-engine/imageuploader.conf is configured with the password
   ini_file:
-    dest: /etc/rhevm/imageuploader.conf
+    dest: /etc/ovirt-engine/imageuploader.conf
     section: ImageUploader
     option: passwd
     value: "{{rhevm_password}}"
@@ -14,10 +14,10 @@
   get_url: url={{appliance_template}} dest={{template_dest}}
 
 - name: Upload into export datastore
-  command: "rhevm-image-uploader -e {{export_datastore}} upload {{template_name}}"
+  command: "engine-image-uploader -e {{export_datastore}} upload {{template_name}}"
 
-# - name: Deploy rhevmshellrc
-#   template: src=rhevmshellrc.j2 dest=/root/.rhevmshellrc
+# - name: Deploy .ovirtshellrc
+#   template: src=rhevmshellrc.j2 dest=/root/.ovirtshellrc
 
 # - name: Get template import api command
 #   vars:

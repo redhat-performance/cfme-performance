@@ -349,15 +349,33 @@ def add_provider(provider):
             "auth_type": "ssh_keypair"
         })
 
+    #  auth_key
+    if provider['type'] == "ManageIQ::Providers::OpenshiftEnterprise::ContainerManager":
+        msg = 'Adding token for OSE'
+        # not sure about adding hawkular yet.
+        data_dict['resources'][0]['credentials']['auth_key'] = provider['credentials']['token']
+
     json_data = json.dumps(data_dict)
     appliance = cfme_appliance['ip_address']
-    response = requests.post("https://" + appliance + "/api/providers",
-                             data=json_data,
-                             auth=(cfme_appliance['rest_api']['username'],
-                                   cfme_appliance['rest_api']['password']),
-                             verify=False,
-                             headers={"content-type": "application/json"},
-                             allow_redirects=False)
+
+    def call_request():
+        response = requests.post("https://" + appliance + "/api/providers",
+                                 data=json_data,
+                                 auth=(cfme_appliance['rest_api']['username'],
+                                       cfme_appliance['rest_api']['password']),
+                                 verify=False,
+                                 headers={"content-type": "application/json"},
+                                 allow_redirects=True)
+                                #  allow_redirects=False)
+        return response
+
+    # import pdb; pdb.set_trace()
+    try:
+        response = call_request()
+    except:
+        logger.warning('Waiting for httpd server / provider to come back up')
+        time.sleep(10)
+        response = call_request()
 
     logger.debug('Added Provider: {}, Response: {}'
                  .format(provider['name'], response))

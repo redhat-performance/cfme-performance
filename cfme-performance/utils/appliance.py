@@ -49,9 +49,16 @@ def clean_appliance(ssh_client, dbsync_local_uninstall=True):
     ssh_client.run_command('service evmserverd stop')
     ssh_client.run_command('sync; sync; echo 3 > /proc/sys/vm/drop_caches')
     ssh_client.run_command('service collectd stop')
-    ssh_client.run_command('service rh-postgresql94-postgresql restart')
-    if dbsync_local_uninstall:
-        ssh_client.run_rake_command('evm:dbsync:local_uninstall')
+    ver = get_version()
+    if ver == '56' or ver == '55':
+        ssh_client.run_command('service rh-postgresql94-postgresql restart')
+        if dbsync_local_uninstall:
+            ssh_client.run_rake_command('evm:dbsync:local_uninstall')
+    elif ver == '57':
+        ssh_client.run_command('service rh-postgresql95-postgresql restart')
+    else:
+        raise Exception('Unable to set config: Unrecognized version of appliance')
+
     # 5.6 requires DISABLE_DATABASE_ENVIRONMENT_CHECK=1
     ssh_client.run_command(
         'cd /var/www/miq/vmdb;DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bin/rake evm:db:reset')
@@ -60,6 +67,8 @@ def clean_appliance(ssh_client, dbsync_local_uninstall=True):
     # Work around for https://bugzilla.redhat.com/show_bug.cgi?id=1337525
     ssh_client.run_command('service httpd stop')
     ssh_client.run_command('rm -rf /run/httpd/*')
+    ssh_client.run_command('rm -rf /var/www/miq/vmdb/log/*.log*')
+    ssh_client.run_command('rm -rf /var/www/miq/vmdb/log/apache/*.log*')
     ssh_client.run_command('service evmserverd start')
     logger.debug('Cleaned appliance in: {}'.format(round(time.time() - starttime, 2)))
 
