@@ -13,10 +13,11 @@ ems_event_id=$5
 cd /var/www/miq/vmdb/log/
 
 if [[ $* -eq 0 ]]; then
+  evm_log='/var/www/miq/vmdb/log/evm.log'
   logfile='ems_refresh_last_avg.log'
   last_events=20
-  log_start='2016-11-14T08:45'
-  log_end='2016-11-14T09:00'
+  log_start='2016-12-13T09:48'
+  log_end='2016-12-13T10:48'
   ems_event_id='EmsRefresh.refresh' #|ems_refresh
 fi
 
@@ -24,7 +25,7 @@ echo > ~/$logfile
 
 echo This reading was recorded on: `date +"%Y-%m-%d %H:%M:%S,%3N"` >> ~/$logfile
 
-echo "...Reading logs from /var/www/miq/vmdb/log/evm.log
+echo "...Reading logs from $evm_log
       and extracting last $last_events events.
       Begin time: $log_start
       End time: $log_end" >> ~/$logfile
@@ -33,11 +34,13 @@ echo "...Reading logs from /var/www/miq/vmdb/log/evm.log
 log_frag="$(awk -F'[]]|[[]| ' '$0 ~ /^\[----\] I, \[/ &&
                    $6 >= "'$log_start'" { p=1 }
                    $6 >= "'$log_end'" { p=0 } p { print $0 }' \
-                   /var/www/miq/vmdb/log/evm.log )"
+                   $evm_log )"
 
 ids=(`echo "$log_frag" | egrep '('$ems_event_id')' |  grep ready | \
                    grep MiqQueue.put\) | grep -oE '(Message id: \[[0-9]*\])' | \
                    sed 's/Message id: \[//' | sed 's/.\{1\}$//' | tail -n $last_events`)
+
+echo "${#ids[@]} IDs found.." >> ~/$logfile
 
 timings=()
 timestamps=()
@@ -70,6 +73,8 @@ fi
 printf "Average: $average\n" >> ~/$logfile
 printf "%0.s-" {1..70} >> ~/$logfile
 echo >> ~/$logfile
+echo "${#ids[@]} events were queued, out of which ${#timings[@]} events were delivered with [ok] status..." >> ~/$logfile
+
 echo "showing output from log file: ~/$logfile:"
 cat ~/$logfile
 cd ~
