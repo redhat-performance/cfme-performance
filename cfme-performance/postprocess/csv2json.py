@@ -1,4 +1,3 @@
-
 import csv
 import json
 import sys
@@ -25,8 +24,8 @@ def process_dirs(dirlist):
         else:
             dictlist = handle_scenario(indir+"/"+dir+"/rawdata")
             tdict = {}
-            tdict["name"] = dir
-            tdict["value"] = dictlist
+            tdict["scenerio-name"] = dir
+            tdict["process-name"] = dictlist
             resultdlst.append(tdict)
     return resultdlst
 
@@ -34,18 +33,28 @@ def version_info():
     print "TODO"
 
 def handle_scenario(rawpath):
-    dictlist = []
+    mdict = {}
     rawfiles = os.listdir(rawpath)
     for file in rawfiles:
         reader = csv.DictReader(open(rawpath+"/"+file))
         rows = list(reader)
-        out = json.dumps(rows)
-        output = json.loads(out)
-        tdict = {}
-        tdict["name"] = file
-        tdict["values"] = out
-        dictlist.append(tdict)
-    return dictlist
+        out = rows
+        nm = file.split('-')
+        len_name = len(nm)
+        if len_name == 2:
+            p_id = nm[0]
+            process_name = nm[1].strip('.csv')
+            sdict = {}
+            sdict[p_id] = out
+            tdict = {}
+            tdict["pid"] = sdict
+            mdict.setdefault(process_name, []).append(tdict)
+        else:
+            process_name = nm[0].strip('.csv')
+            sdict = {}
+            sdict["value"] = out
+            mdict.setdefault(process_name, []).append(sdict)
+    return mdict
 
 
     print "TODO"
@@ -68,6 +77,9 @@ def get_params(dirname):
     elif tname == "workload-refresh" and nlst[3] == "providers":
         workload = "workload-refresh-providers"
         version = lst[4]
+    elif tname == "workload-cap":
+        workload = "workload-cap-and-util"
+        version = lst[-1]
     output = [workload, version]
     return output
 
