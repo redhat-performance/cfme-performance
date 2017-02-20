@@ -103,7 +103,7 @@ class SSHClient(paramiko.SSHClient):
             self.connect()
         return super(SSHClient, self).get_transport(*args, **kwargs)
 
-    def run_command(self, command, timeout=RUNCMD_TIMEOUT, reraise=False, log_less=False):
+    def run_command(self, command, timeout=RUNCMD_TIMEOUT, reraise=False, log_less=False, ignore_stderr=False):
         if log_less:
             logger.info("Running command `{}...(truncated)...`".format(command[:30]))
         else:
@@ -126,7 +126,7 @@ class SSHClient(paramiko.SSHClient):
                         if self._streaming:
                             sys.stdout.write(line)
 
-                if session.recv_stderr_ready:
+                if session.recv_stderr_ready and not ignore_stderr:
                     for line in stderr:
                         output += line
                         if self._streaming:
@@ -149,10 +149,12 @@ class SSHClient(paramiko.SSHClient):
 
         return SSHResult(1, None)
 
-    def run_rails_command(self, command, timeout=RUNCMD_TIMEOUT):
+#   added ignore_stderr option to handle ScannerError issue, which arises because
+#   the output contains stderr, and thus yaml.load fails
+    def run_rails_command(self, command, timeout=RUNCMD_TIMEOUT, ignore_stderr=False):
         logger.info("Running rails command `%s`", command)
         return self.run_command('cd /var/www/miq/vmdb; bin/rails runner {}'.format(command),
-            timeout=timeout)
+            timeout=timeout, ignore_stderr=ignore_stderr)
 
     def run_rails_console(self, command, sandbox=False, timeout=RUNCMD_TIMEOUT, log_less=False):
         """Runs Ruby inside of rails console. stderr is thrown away right now but could prove useful
