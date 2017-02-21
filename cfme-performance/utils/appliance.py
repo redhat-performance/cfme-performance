@@ -77,7 +77,7 @@ def get_vmdb_yaml_config(ssh_client):
     ver = get_version()
     if ver == '56' or ver == '57':
         base_data = ssh_client.run_rails_command(
-            'puts\(Settings.to_hash.deep_stringify_keys.to_yaml\)')
+            'puts\(Settings.to_hash.deep_stringify_keys.to_yaml\)', ignore_stderr=True)
         if base_data.rc:
             logger.error("Config couldn't be found")
             logger.error(base_data.output)
