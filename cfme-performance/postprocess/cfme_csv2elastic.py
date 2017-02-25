@@ -10,7 +10,7 @@
 # - add server roles info about cfme appliance, from yml
 # - get ES config from cfme_performance.yml
 # - add to cfme_performance logger
-# - illegal arg exception for summary uplaods on Elasticsearch 5.x; runs fine w/ 1.x
+# - add threaded requests for batch processing bulk_upload
 
 import os
 import re
@@ -26,15 +26,25 @@ from collections import defaultdict
 from urllib3 import exceptions as ul_excs, Timeout
 from elasticsearch import VERSION, Elasticsearch, helpers, exceptions as es_excs
 
+if VERSION < (5, 0, 0):
+    msg = """At least v5.0.0 of the ElasticSearch Python client is required.\n
+             Found %r""" % (VERSION)
+    quit(msg)
+
+_NAME_ = 'cfme_csv2elastic'
+_VERSION_ = "1.1.0-0"
+_DEBUG = 1
+
+INDEX_PREFIX = 'cfme-run'
+# for batch processing actions in bulk_upload to avoid
+# nginx's 413 Request Entity Too Large. (that is if ES hosted as such)
+INDEXING_THRESHOLD = 14
+
 # ES config
-# host = "10.12.23.122"
-# port = 9201
-host = "localhost"
-port = 9701
+host = "10.12.23.122"
+port = 9201
 auth = ('admin', 'admin')
 
-_DEBUG = 1
-INDEX_PREFIX = 'cfme-run'
 _op_type = 'create'
 _read_timeout = 120
 timeoutobj = Timeout(total=1200, connect=10, read=_read_timeout)
@@ -64,20 +74,20 @@ class ElasticIndexer(object):
             else:
                 self.ES = Elasticsearch(self.endpoint,
                                         max_retries=0)
-            print("Connected", self.ES.info())
+            # print(self.ES.info())
         except Exception as E:
             quit("ERROR: %s" % E)
 
     def gen_action(self, **kwargs):
         """
-        block func used for gen_bulk_actions()
+        single ES doc that gets consumed inside bulk uploads
         """
         action = {
             "_op_type": _op_type,
             "_index": kwargs['index_name'],
             "_type": kwargs['doc_type'],
             "_id": kwargs['uid'],
-            "@timestamp": kwargs['timestamp'],
+            # "@timestamp": kwargs['timestamp'],
             "_source": kwargs['data']
         }
         return action
@@ -87,15 +97,13 @@ class ElasticIndexer(object):
         uploads single doc
         """
         try:
-            path = os.path.join('/home/arcolife/', 'dump.json')
-            data = json.dumps(kwargs['data'])
-            f = open(path, 'w'); f.write(data); f.close()
-
+            # avoid usage of timestamps fields as it's not supported in 5.x
+            # keep it here, for usage, if backporting needed.
+            # timestamp=kwargs['timestamp'],
             self.ES.index(
                 index=kwargs['index_name'],
                 doc_type=kwargs['doc_type'],
                 id=kwargs['uid'],
-                timestamp=kwargs['timestamp'],
                 body=kwargs['data'],
             )
         except Exception as E:
@@ -164,11 +172,12 @@ class ElasticIndexer(object):
                     end = time.time()
                     if _DEBUG > 8:
                         import pdb; pdb.set_trace()
-                    other_errors = []
                     for error in err.errors:
-                        if 'already exists' in error[_op_type]['error']:
+                        sts = error[_op_type]['status']
+                        if sts not in (200, 201):
                             self.duplicates += 1
                         else:
+                            print(error[_op_type]['error'])
                             self.exceptions += 1
                 except Exception as err:
                     end = time.time()
@@ -200,9 +209,9 @@ class ElasticIndexer(object):
                             lcl_successes += 1
                     if _DEBUG > 0 or lcl_errors > 0:
                         print("\tdone (end ts: %s, duration: %.2fs,"
-                              " success: %d, duplicates: %d, errors: %d)" %
+                              " success: %d, duplicates: %d, errors: %d,  exceptions: %d)" %
                                     (tstos(end), end - start, self.successes,
-                                  self.duplicates, self.errors))
+                                  self.duplicates, self.errors, self.exceptions))
                     good_results = 1
                 break
         finally:
@@ -226,13 +235,24 @@ class ElasticIndexer(object):
             'summary': '%s.summary-%s'%(INDEX_PREFIX, docs['date']),
             'smem': '%s.smem-%s'%(INDEX_PREFIX, docs['date'])
         }
+
+        # helper statements
         # self.ES.indices.delete(index=index_names['smem'], ignore=[400, 404])
         # self.ES.indices.delete(index=index_names['summary'], ignore=[400, 404])
+
+        # ib_data = self.gen_action(
+        #     index_name=index_names['summary'],
+        #     doc_type='metadata',
+        #     uid=docs['metadata']['cfme_run_md5'],
+        #     data=docs['metadata'],
+        # )
+        # self.actions.append(ib_data)
+        # FIXME: indexing for summary data along with smem isn't tested atm.
+        # use other alternative to index metadata separately for now
         self.upload_doc(
             index_name=index_names['summary'],
             doc_type='metadata',
             uid=docs['metadata']['cfme_run_md5'],
-            timestamp=docs['metadata']['timestamp'],
             data=docs['metadata']
         )
         print('\t..indexed metata successfully.')
@@ -247,17 +267,25 @@ class ElasticIndexer(object):
                     else:
                         run_uid = docs['metadata']['cfme_run_md5'] + scenario + csv_kind
                     md5 = hashlib.md5((run_uid).encode('utf-8')).hexdigest()
+                    # avoid usage of timestamps fields as it's not supported in 5.x
                     ib_data = self.gen_action(
                         index_name=index_names['smem'],
                         doc_type=csv_kind,
                         uid=md5,
-                        timestamp=docs['metadata']['timestamp'],
+                        # timestamp=docs['metadata']['timestamp'],
                         data=item,
                     )
                     self.actions.append(ib_data)
 
-        self.bulk_upload()
+                    # for cfme docs, INDEXING_THRESHOLD=14 doesn't results in a 413 'Request Entity Too Large'
+                    # we could change elasticsearch instance's default params, but to avoid that,
+                    # we're batch processing actions here.
+                    if len(self.actions) > INDEXING_THRESHOLD:
+                        self.bulk_upload()
 
+        # index last bundle
+        if len(self.actions) > 0:
+            self.bulk_upload()
 
 
 class CfmeResultsParser(object):
@@ -292,12 +320,25 @@ class CfmeResultsParser(object):
         """
         handles installed package versions on CFME appliance
         """
-        version_dict = defaultdict(dict)
+        version_dict = {}
         for current_csv in csv_bundle:
             csv_name = os.path.splitext(os.path.basename(current_csv))[0]
-            for row in csv.reader(open(current_csv)):
-                if row:
-                    version_dict[csv_name][row[0].strip()] = row[1].strip()
+            csv_stream = csv.reader(open(current_csv))
+            if csv_name == 'system':
+                versions = {}
+                for row in csv_stream:
+                    if row:
+                        versions[row[0].strip()] = row[1].strip()
+            else:
+                versions = []
+                for row in csv_stream:
+                    if row:
+                        package_details = {
+                            'package': row[0].strip(),
+                            'version': row[1].strip(),
+                        }
+                        versions.append(package_details)
+            version_dict[csv_name] = versions
         return version_dict
 
     def process_summary_csv(self, csv_path, scenerio):
@@ -332,6 +373,15 @@ class CfmeResultsParser(object):
         metadata_dict['per_process_SWAP'] = list(csv.DictReader(io.StringIO(groups[5])))
         return metadata_dict
 
+    def cleanup_csv(self, csv_contents):
+        # TimeStamp -> timestamp and it's value to indexing format
+        for item in csv_contents:
+            item['timestamp'] = datetime.strptime(
+                item.pop('TimeStamp'),
+                "%Y-%m-%d %H:%M:%S.%f"
+            ).isoformat()
+        return csv_contents
+
     def handle_scenario(self, csv_bundle, scenerio, md5):
         """
         3 kinds of scenarios:
@@ -350,6 +400,7 @@ class CfmeResultsParser(object):
             elif re.match('appliance.csv', csv_name):
                 reader = csv.DictReader(open(current_csv))
                 csv_contents = list(reader)
+                csv_contents = self.cleanup_csv(csv_contents)
                 scenario_data['appliance_memory'].append(dict(
                     scenario=scenerio,
                     cfme_run_md5=md5,
@@ -360,6 +411,7 @@ class CfmeResultsParser(object):
                 csv_contents = list(reader)
                 # pid-name.csv -> [pid, name]
                 pid_name = os.path.splitext(csv_name)[0].split('-')
+                csv_contents = self.cleanup_csv(csv_contents)
                 scenario_data['processes'].append(dict(
                     name=pid_name[1],
                     pid=pid_name[0],
@@ -374,6 +426,10 @@ class CfmeResultsParser(object):
         main function that walks through results directory and converts csv files.
         """
         results_data = defaultdict(dict)
+
+        results_data['metadata']['generated-by'] = _NAME_
+        results_data['metadata']['generated-by-version'] = _VERSION_
+
         self.run_name = os.path.basename(self.results_dir)
         indexing_params = self.__get_params(self.run_name)
         tstamp = indexing_params[0].isoformat()
