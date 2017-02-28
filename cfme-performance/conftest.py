@@ -47,6 +47,12 @@ def pytest_addoption(parser):
                      help="Which stream to use.")
     group._addoption('--sprout-timeout', dest='sprout_timeout', type=int,
                      default=10080, help="How many minutes is the lease timeout.")
+    group._addoption(
+        '--sprout-version', dest='sprout_version', default=None, help="Which version to use.")
+    group._addoption('--sprout-override-ram', dest='sprout_override_ram', type=int,
+        default=0, help="Override RAM (MB). 0 means no override.")
+    group._addoption('--sprout-override-cpu', dest='sprout_override_cpu', type=int,
+        default=0, help="Override CPU core count. 0 means no override.")
 
 
 def pytest_configure(config):
@@ -60,7 +66,10 @@ def pytest_configure(config):
             pool_id = sprout_client.request_appliances(
                 config.option.sprout_group,
                 count=config.option.sprout_appliances,
-                lease_time=config.option.sprout_timeout
+                lease_time=config.option.sprout_timeout,
+                version=config.option.sprout_version,
+                cpu=config.option.sprout_override_cpu or None,
+                ram=config.option.sprout_override_ram or None,
             )
             wait_for = partial(wait_for_mod)
             logger().info("Pool {}. Waiting for fulfillment ...\n".format(pool_id))
