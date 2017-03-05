@@ -19,7 +19,7 @@
     dest: "{{item.dest}}"
     remote_src: true
     backup: true
-  when: is56
+  when: is56 or is57
   with_items:
     - src: /root/miq_queue.rb.patch
       dest: /var/www/miq/vmdb/app/models/miq_queue.rb
