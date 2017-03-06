@@ -5,12 +5,7 @@
 # Example:
 # ./postprocess/csv2elastic.py results/20170105161527-workload-cap-and-util-5.7.0.1/
 
-# WIP:
-# - plugin indexer to cfme_performance report generation /postprocessing module
-# - add server roles info about cfme appliance, from yml
-# - get ES config from cfme_performance.yml
-# - add to cfme_performance logger
-# - add threaded requests for batch processing bulk_upload
+# WIP: [csv2elastic] issues on github/cfme-performance/issues/
 
 import os
 import re
@@ -38,7 +33,8 @@ _DEBUG = 1
 INDEX_PREFIX = 'cfme-run'
 # for batch processing actions in bulk_upload to avoid
 # nginx's 413 Request Entity Too Large. (that is if ES hosted as such)
-INDEXING_THRESHOLD = 14
+# INDEXING_THRESHOLD = 14
+INDEXING_THRESHOLD = 3000
 
 # ES config
 host = "10.12.23.122"
@@ -256,6 +252,7 @@ class ElasticIndexer(object):
             data=docs['metadata']
         )
         print('\t..indexed metata successfully.')
+        print('\t..Now uploading smem data. This could take some time')
 
         # Now, upload smem data
         for scenario in docs['smem_data']:
@@ -263,7 +260,9 @@ class ElasticIndexer(object):
                 for item in docs['smem_data'][scenario][csv_kind]:
                     # calculate per process '_id', to be used while indexing in ES
                     if csv_kind == 'processes':
-                        run_uid = docs['metadata']['cfme_run_md5'] + scenario + csv_kind + item['pid']
+                        run_uid = docs['metadata']['cfme_run_md5'] + scenario + csv_kind + item['pid'] + item['TimeStamp']
+                    elif csv_kind == 'appliance_memory':
+                        run_uid = docs['metadata']['cfme_run_md5'] + scenario + csv_kind + item['TimeStamp']
                     else:
                         run_uid = docs['metadata']['cfme_run_md5'] + scenario + csv_kind
                     md5 = hashlib.md5((run_uid).encode('utf-8')).hexdigest()
@@ -341,6 +340,27 @@ class CfmeResultsParser(object):
             version_dict[csv_name] = versions
         return version_dict
 
+    def csv_sanitizer(self, csv_contents=[], type=''):
+        csv_contents = list(csv_contents)
+        if type == 'summary':
+            for item in csv_contents:
+                item['start_of_test'] = float(item['start_of_test'])
+                item['end_of_test'] = float(item['end_of_test'])
+        elif type == 'appliance' or type == 'processes':
+            for item in csv_contents:
+                # TimeStamp -> timestamp and it's value to indexing format
+                # tstamp = item.pop('TimeStamp')
+                tstamp = datetime.strptime(
+                    item.pop('TimeStamp'),
+                    "%Y-%m-%d %H:%M:%S.%f"
+                )
+                # import pdb; pdb.set_trace()
+                for mem_type in item:
+                    item[mem_type] = float(item[mem_type])
+                item['TimeStamp'] = tstamp.strftime("%Y-%m-%d %H:%M:%S")
+
+        return csv_contents
+
     def process_summary_csv(self, csv_path, scenerio):
         """
         cleans up and processes *-summary.csv files in a scenario
@@ -360,27 +380,30 @@ class CfmeResultsParser(object):
         # metadata_dict['cfme_version'] = scenario_metadata[0].split()[-1]
         metadata_dict['provider'] = scenario_metadata[1].split()[-1]
         memory_str = re.sub(r'(?i)^Version.*\n', '', groups[0])
-        metadata_dict['total_memory'] = list(csv.DictReader(io.StringIO(memory_str)))
+        metadata_dict['total_memory'] = self.csv_sanitizer(
+            csv_contents=csv.DictReader(io.StringIO(memory_str)),
+            type='summary')
         # groups[1] --> RSS
-        metadata_dict['per_process_RSS'] = list(csv.DictReader(io.StringIO(groups[1])))
+        metadata_dict['per_process_RSS'] = self.csv_sanitizer(
+            csv_contents=csv.DictReader(io.StringIO(groups[1])),
+            type='summary')
         # groups[2] --> PSS
-        metadata_dict['per_process_PSS'] = list(csv.DictReader(io.StringIO(groups[2])))
+        metadata_dict['per_process_PSS'] = self.csv_sanitizer(
+            csv_contents=csv.DictReader(io.StringIO(groups[2])),
+            type='summary')
         # groups[3] --> USS
-        metadata_dict['per_process_USS'] = list(csv.DictReader(io.StringIO(groups[3])))
+        metadata_dict['per_process_USS'] = self.csv_sanitizer(
+            csv_contents=csv.DictReader(io.StringIO(groups[3])),
+            type='summary')
         # groups[4] --> VSS
-        metadata_dict['per_process_VSS'] = list(csv.DictReader(io.StringIO(groups[4])))
+        metadata_dict['per_process_VSS'] = self.csv_sanitizer(
+            csv_contents=csv.DictReader(io.StringIO(groups[4])),
+            type='summary')
         # groups[5] --> SWAP
-        metadata_dict['per_process_SWAP'] = list(csv.DictReader(io.StringIO(groups[5])))
+        metadata_dict['per_process_SWAP'] = self.csv_sanitizer(
+            csv_contents=csv.DictReader(io.StringIO(groups[5])),
+            type='summary')
         return metadata_dict
-
-    def cleanup_csv(self, csv_contents):
-        # TimeStamp -> timestamp and it's value to indexing format
-        for item in csv_contents:
-            item['timestamp'] = datetime.strptime(
-                item.pop('TimeStamp'),
-                "%Y-%m-%d %H:%M:%S.%f"
-            ).isoformat()
-        return csv_contents
 
     def handle_scenario(self, csv_bundle, scenerio, md5):
         """
@@ -398,27 +421,29 @@ class CfmeResultsParser(object):
                 scenario_data['scenario_summary'] = self.process_summary_csv(current_csv, scenerio)
                 continue
             elif re.match('appliance.csv', csv_name):
-                reader = csv.DictReader(open(current_csv))
-                csv_contents = list(reader)
-                csv_contents = self.cleanup_csv(csv_contents)
-                scenario_data['appliance_memory'].append(dict(
-                    scenario=scenerio,
-                    cfme_run_md5=md5,
-                    value=csv_contents,
-                ))
+                reader_obj = csv.DictReader(open(current_csv))
+                csv_contents = self.csv_sanitizer(csv_contents=reader_obj, type='appliance')
+                for record in csv_contents:
+                    datum = dict(
+                        scenario=scenerio,
+                        cfme_run_md5=md5,
+                    )
+                    datum.update(record)
+                    scenario_data['appliance_memory'].append(datum)
             else:
-                reader = csv.DictReader(open(current_csv))
-                csv_contents = list(reader)
+                reader_obj = csv.DictReader(open(current_csv))
                 # pid-name.csv -> [pid, name]
                 pid_name = os.path.splitext(csv_name)[0].split('-')
-                csv_contents = self.cleanup_csv(csv_contents)
-                scenario_data['processes'].append(dict(
-                    name=pid_name[1],
-                    pid=pid_name[0],
-                    scenario=scenerio,
-                    cfme_run_md5=md5,
-                    value=csv_contents,
-                ))
+                csv_contents = self.csv_sanitizer(csv_contents=reader_obj, type='processes')
+                for record in csv_contents:
+                    datum = dict(
+                        name=pid_name[1],
+                        pid=pid_name[0],
+                        scenario=scenerio,
+                        cfme_run_md5=md5,
+                    )
+                    datum.update(record)
+                    scenario_data['processes'].append(datum)
         return scenario_data
 
     def process_results(self):
@@ -432,12 +457,12 @@ class CfmeResultsParser(object):
 
         self.run_name = os.path.basename(self.results_dir)
         indexing_params = self.__get_params(self.run_name)
-        tstamp = indexing_params[0].isoformat()
+        tstamp = indexing_params[0].strftime("%Y-%m-%d %H:%M:%S")
         run_uid = self.run_name + tstamp
         md5 = hashlib.md5((run_uid).encode('utf-8')).hexdigest()
-        shared_info = dict(timestamp=tstamp, cfme_run_md5=md5)
+        shared_info = dict(TimeStamp=tstamp, cfme_run_md5=md5)
 
-        results_data['date'] = indexing_params[0].strftime("%Y-%m-%d")
+        results_data['date'] = indexing_params[0].strftime("%Y.%m.%d")
         results_data['metadata'].update(shared_info)
         results_data['metadata']['workload_type'] = indexing_params[1]
         results_data['metadata']['cfme_version'] = indexing_params[2]
