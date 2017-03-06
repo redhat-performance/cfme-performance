@@ -1,7 +1,18 @@
---- miq_queue.rb.orig	2016-06-03 17:02:35.075163552 -0400
-+++ miq_queue.rb	2016-06-03 18:38:29.918499974 -0400
-@@ -120,6 +120,15 @@
-     options[:args] = [options[:args]] if options[:args] && !options[:args].kind_of?(Array)
+From 5fa19dc6907553cccae1ce84ee67392a30480c5d Mon Sep 17 00:00:00 2001
+From: Archit Sharma <arcsharm@redhat.com>
+Date: Sat, 4 Mar 2017 05:12:37 +0530
+Subject: [PATCH] update miq_queue.rb
+
+---
+ miq_queue.rb | 27 ++++++++++++++++++++++++++-
+ 1 file changed, 26 insertions(+), 1 deletion(-)
+
+diff --git a/miq_queue.rb b/miq_queue.rb
+index 0350b29..77922ba 100644
+--- a/miq_queue.rb
++++ b/miq_queue.rb
+@@ -122,6 +122,15 @@ class MiqQueue < ApplicationRecord
+     end
 
      msg = MiqQueue.create!(options)
 +    # cfme-performance statsd
@@ -13,10 +24,10 @@
 +    $statsd.increment "manageiq.#{$hostname}.queue.role.#{options[:role]}"
 +    $statsd.increment "manageiq.#{$hostname}.queue.zone.#{options[:zone]}"
 +    # End cfme-performance statsd
-     _log.info("#{MiqQueue.format_full_log_msg(msg)}")
+     _log.info(MiqQueue.format_full_log_msg(msg))
      msg
    end
-@@ -178,7 +187,15 @@
+@@ -180,7 +189,15 @@ class MiqQueue < ApplicationRecord
      if result == :stale
        _log.debug("All #{prefetch_max_per_worker} messages stale, returning...")
      else
@@ -33,7 +44,7 @@
      end
      result
    end
-@@ -380,6 +397,14 @@
+@@ -380,6 +397,14 @@ class MiqQueue < ApplicationRecord
    def delivered(state, msg, result)
      self.state = state
      _log.info("#{MiqQueue.format_short_log_msg(self)}, State: [#{state}], Delivered in [#{Time.now - delivered_on}] seconds")
@@ -48,3 +59,5 @@
      m_callback(msg, result) unless miq_callback.blank?
    rescue => err
      _log.error("#{MiqQueue.format_short_log_msg(self)}, #{err.message}")
+--
+2.7.4
