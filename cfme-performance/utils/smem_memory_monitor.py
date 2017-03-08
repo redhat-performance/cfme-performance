@@ -62,6 +62,8 @@ miq_workers = [
     'ManageIQ::Providers::OpenshiftEnterprise::ContainerManager::RefreshWorker',
 
     'ManageIQ::Providers::Hawkular::MiddlewareManager::RefreshWorker',
+    'ManageIQ::Providers::StorageManager::CinderManager::RefreshWorker',
+    'ManageIQ::Providers::StorageManager::SwiftManager::RefreshWorker',
 
     'ManageIQ::Providers::Amazon::NetworkManager::RefreshWorker',
     'ManageIQ::Providers::Azure::NetworkManager::RefreshWorker',
@@ -75,6 +77,7 @@ miq_workers = [
     'MiqEventHandler',
 
     'ManageIQ::Providers::Openstack::InfraManager::EventCatcher',
+    'ManageIQ::Providers::StorageManager::CinderManager::EventCatcher',
     'ManageIQ::Providers::Redhat::InfraManager::EventCatcher',
     'ManageIQ::Providers::Vmware::InfraManager::EventCatcher',
     'MiqEventCatcherRedhat',                                                      # 5.4
