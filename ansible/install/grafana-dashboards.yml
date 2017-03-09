@@ -50,9 +50,9 @@
         process_list_name: CFME-Microsoft
         dashboard_name: CFME-Microsoft System Performance
 
-      - template_name: cfme_general_system_performance
+      - template_name: cfme_general_system_performance_with_statsd
         process_list_name: CFME-Openstack
-        dashboard_name: CFME-Openstack System Performance
+        dashboard_name: CFME-Openstack System Performance with statsd
 
       - template_name: cfme_general_system_performance
         process_list_name: CFME-RedHat
