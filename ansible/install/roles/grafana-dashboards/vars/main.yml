@@ -865,7 +865,7 @@ per_process_panels:
         - PostgresServers
     - name: "Statsd"
       processes:
-        - statsd        
+        - statsd
     - name: "MiqGenericWorker"
       processes:
         - MiqGenericWorker
@@ -1013,6 +1013,9 @@ per_process_panels:
         - PostgresStats
         - PostgresPgLogical
         - PostgresServers
+    - name: "Statsd"
+      processes:
+        - statsd
     - name: "MiqGenericWorker"
       processes:
         - MiqGenericWorker
@@ -1057,6 +1060,12 @@ per_process_panels:
     - name: "Openstack::NetworkManager::RefreshWorker"
       processes:
         - "Openstack::NetworkManager::RefreshWorker"
+    - name: "ManageIQ::Providers::StorageManager::CinderManager::RefreshWorker"
+      processes:
+        - "ManageIQ::Providers::StorageManager::CinderManager::RefreshWorker"
+    - name: "ManageIQ::Providers::StorageManager::SwiftManager::RefreshWorker"
+      processes:
+        - "ManageIQ::Providers::StorageManager::SwiftManager::RefreshWorker"
     - name: "Openstack::InfraManager::EventCatcher"
       processes:
         - "Openstack::InfraManager::EventCatcher"
@@ -1067,6 +1076,9 @@ per_process_panels:
     - name: "Openstack::NetworkManager::EventCatcher"
       processes:
         - "Openstack::NetworkManager::EventCatcher"
+    - name: "ManageIQ::Providers::StorageManager::CinderManager::EventCatcher"
+      processes:
+        - "ManageIQ::Providers::StorageManager::CinderManager::EventCatcher"
     - name: "Openstack::InfraManager::MetricsCollectorWorker"
       processes:
         - "Openstack::InfraManager::MetricsCollectorWorker"
