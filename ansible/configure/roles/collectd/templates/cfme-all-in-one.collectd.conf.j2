@@ -310,6 +310,9 @@ LoadPlugin uptime
   ProcessMatch "Google::NetworkManager::RefreshWorker" "Google::NetworkManager::RefreshWorker.*"
   ProcessMatch "Openstack::NetworkManager::RefreshWorker" "Openstack::NetworkManager::RefreshWorker.*"
 
+  ProcessMatch "StorageManager::CinderManager::RefreshWorker" "StorageManager::CinderManager::RefreshWorker.*"
+  ProcessMatch "StorageManager::SwiftManager::RefreshWorker" "StorageManager::SwiftManager::RefreshWorker.*"
+
   ProcessMatch "Atomic::ContainerManager::RefreshWorker" "Atomic::ContainerManager::RefreshWorker.*"
   ProcessMatch "AtomicEnterprise::ContainerManager::RefreshWorker" "AtomicEnterprise::ContainerManager::RefreshWorker.*"
   ProcessMatch "Hawkular::MiddlewareManager::RefreshWorker" "Hawkular::MiddlewareManager::RefreshWorker.*"
@@ -336,6 +339,7 @@ LoadPlugin uptime
   ProcessMatch "MiqEventCatcherOpenstack" "MiqEventCatcherOpenstack.*"
 
   ProcessMatch "Openstack::NetworkManager::EventCatcher" "Openstack::NetworkManager::EventCatcher.*"
+  ProcessMatch "StorageManager::CinderManager::EventCatcher" "StorageManager::CinderManager::EventCatcher.*"
 
   ProcessMatch "Atomic::ContainerManager::EventCatcher" "Atomic::ContainerManager::EventCatcher.*"
   ProcessMatch "AtomicEnterprise::ContainerManager::EventCatcher" "AtomicEnterprise::ContainerManager::EventCatcher.*"

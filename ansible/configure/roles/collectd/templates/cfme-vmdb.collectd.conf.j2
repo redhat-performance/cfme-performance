@@ -288,6 +288,7 @@ LoadPlugin uptime
   ProcessMatch "Redhat::InfraManager::RefreshWorker" "Redhat::InfraManager::RefreshWorker.*"
   ProcessMatch "Microsoft::InfraManager::RefreshWorker" "Microsoft::InfraManager::RefreshWorker.*"
   ProcessMatch "Openstack::InfraManager::RefreshWorker" "Openstack::InfraManager::RefreshWorker.*"
+
   ProcessMatch "MiqEmsRefreshWorkerVmware" "MiqEmsRefreshWorkerVmware.*"
   ProcessMatch "MiqEmsRefreshWorkerRedhat" "MiqEmsRefreshWorkerRedhat.*"
   ProcessMatch "MiqEmsRefreshWorkerMicrosoft" "MiqEmsRefreshWorkerMicrosoft.*"
@@ -309,6 +310,9 @@ LoadPlugin uptime
   ProcessMatch "Azure::NetworkManager::RefreshWorker" "Azure::NetworkManager::RefreshWorker.*"
   ProcessMatch "Google::NetworkManager::RefreshWorker" "Google::NetworkManager::RefreshWorker.*"
   ProcessMatch "Openstack::NetworkManager::RefreshWorker" "Openstack::NetworkManager::RefreshWorker.*"
+
+  ProcessMatch "StorageManager::CinderManager::RefreshWorker" "StorageManager::CinderManager::RefreshWorker.*"
+  ProcessMatch "StorageManager::SwiftManager::RefreshWorker" "StorageManager::SwiftManager::RefreshWorker.*"
 
   ProcessMatch "Atomic::ContainerManager::RefreshWorker" "Atomic::ContainerManager::RefreshWorker.*"
   ProcessMatch "AtomicEnterprise::ContainerManager::RefreshWorker" "AtomicEnterprise::ContainerManager::RefreshWorker.*"
@@ -336,6 +340,7 @@ LoadPlugin uptime
   ProcessMatch "MiqEventCatcherOpenstack" "MiqEventCatcherOpenstack.*"
 
   ProcessMatch "Openstack::NetworkManager::EventCatcher" "Openstack::NetworkManager::EventCatcher.*"
+  ProcessMatch "StorageManager::CinderManager::EventCatcher" "StorageManager::CinderManager::EventCatcher.*"
 
   ProcessMatch "Atomic::ContainerManager::EventCatcher" "Atomic::ContainerManager::EventCatcher.*"
   ProcessMatch "AtomicEnterprise::ContainerManager::EventCatcher" "AtomicEnterprise::ContainerManager::EventCatcher.*"

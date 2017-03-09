@@ -102,6 +102,9 @@ LoadPlugin uptime
   ProcessMatch "MiqEmsRefreshWorkerRedhat" "MiqEmsRefreshWorkerRedhat.*"
   ProcessMatch "MiqEmsRefreshWorkerMicrosoft" "MiqEmsRefreshWorkerMicrosoft.*"
 
+  ProcessMatch "StorageManager::CinderManager::RefreshWorker" "StorageManager::CinderManager::RefreshWorker.*"
+  ProcessMatch "StorageManager::SwiftManager::RefreshWorker" "StorageManager::SwiftManager::RefreshWorker.*"
+
   ProcessMatch "AnsibleTower::ConfigurationManager::RefreshWorker" "AnsibleTower::ConfigurationManager::RefreshWorker.*"
   ProcessMatch "Foreman::ConfigurationManager::RefreshWorker" "Foreman::ConfigurationManager::RefreshWorker.*"
   ProcessMatch "Foreman::ProvisioningManager::RefreshWorker" "Foreman::ProvisioningManager::RefreshWorker.*"
@@ -146,6 +149,7 @@ LoadPlugin uptime
   ProcessMatch "MiqEventCatcherOpenstack" "MiqEventCatcherOpenstack.*"
 
   ProcessMatch "Openstack::NetworkManager::EventCatcher" "Openstack::NetworkManager::EventCatcher.*"
+  ProcessMatch "StorageManager::CinderManager::EventCatcher" "StorageManager::CinderManager::EventCatcher.*"
 
   ProcessMatch "Atomic::ContainerManager::EventCatcher" "Atomic::ContainerManager::EventCatcher.*"
   ProcessMatch "AtomicEnterprise::ContainerManager::EventCatcher" "AtomicEnterprise::ContainerManager::EventCatcher.*"
