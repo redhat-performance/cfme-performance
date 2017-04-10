@@ -20,9 +20,9 @@
   shell: "wget {{db_dumps[appliances[inventory_hostname].dbdump]}} -O /var/opt/rh/rh-postgresql94/lib/pgsql/data/{{appliances[inventory_hostname].dbdump}}"
   when: is56
 
-- name: Get database dump (5.7.x appliances)
+- name: Get database dump (5.7.x / 5.8.x appliances)
   shell: "wget {{db_dumps[appliances[inventory_hostname].dbdump]}} -O /var/opt/rh/rh-postgresql95/lib/pgsql/data/{{appliances[inventory_hostname].dbdump}}"
-  when: is57
+  when: is57 or is58
 
 # download script to fix user priviliges in postgresql, post dbdump import
 - name: Get pchown script to fix db dump
@@ -45,7 +45,7 @@
 
 - name: Restart postgresql service to terminate previous users/sessions
   service: name=rh-postgresql95-postgresql state=restarted
-  when: is57
+  when: is57 or is58
 
 - name: Drop existing database
   command: dropdb vmdb_production
@@ -79,9 +79,9 @@
   when: is55 or is56
   ignore_errors: true
 
-- name: Import database (5.7.x appliances)
+- name: Import database (5.7.x / 5.8.x appliances)
   command: "pg_restore -c -C -v -U root --dbname=vmdb_production -j 6 /var/opt/rh/rh-postgresql95/lib/pgsql/data/{{appliances[inventory_hostname].dbdump}}"
-  when: is57
+  when: is57 or is58
   ignore_errors: true
 
 - name: Run pchown to handle table ownership issues
