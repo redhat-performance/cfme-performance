@@ -10,7 +10,7 @@
 
 - name: Install epel repo (rhel7)
   command: rpm -ivh {{ epel7_rpm }}
-  when: (epel_installed.rc != 0) and (is55 or is56 or is57 or isMaster)
+  when: (epel_installed.rc != 0) and (is55 or is56 or is57 or is58 or isMaster)
 
 # Occasionally seen issues where epel6 urls won't resolve and thus Installing collectd rpms
 # on rhel6 fails.
@@ -21,7 +21,7 @@
 - name: Install collectd rpms (rhel7)
   yum: name={{ item }} state=present
   with_items: "{{collectd_packages[config_type]}}"
-  when: (is55 or is56 or is57 or isMaster)
+  when: (is55 or is56 or is57 of is58 or isMaster)
 
 - name: Install collectd rpms (rhel6)
   yum: name={{ item }} state=present

@@ -54,7 +54,7 @@ def clean_appliance(ssh_client, dbsync_local_uninstall=True):
         ssh_client.run_command('service rh-postgresql94-postgresql restart')
         if dbsync_local_uninstall:
             ssh_client.run_rake_command('evm:dbsync:local_uninstall')
-    elif ver == '57':
+    elif ver == '57' or ver == '58':
         ssh_client.run_command('service rh-postgresql95-postgresql restart')
     else:
         raise Exception('Unable to set config: Unrecognized version of appliance')
@@ -75,7 +75,7 @@ def clean_appliance(ssh_client, dbsync_local_uninstall=True):
 
 def get_vmdb_yaml_config(ssh_client):
     ver = get_version()
-    if ver == '56' or ver == '57':
+    if ver == '56' or ver == '57' or ver == '58':
         base_data = ssh_client.run_rails_command(
             'puts\(Settings.to_hash.deep_stringify_keys.to_yaml\)', ignore_stderr=True)
         if base_data.rc:
@@ -96,7 +96,7 @@ def get_vmdb_yaml_config(ssh_client):
 def set_vmdb_yaml_config(ssh_client, yaml_data):
     logger.info('Uploading VMDB yaml Loader')
     ver = get_version()
-    if ver == '56' or ver == '57':
+    if ver == '56' or ver == '57' or ver == '58':
         ssh_client.run_command('echo "{}" > /tmp/yaml_loader.rb'.format(yaml_loader56),
             log_less=True)
         logger.info('Uploading VMDB Config')

@@ -24,6 +24,10 @@
   service: name=rh-postgresql95-postgresql state=restarted
   when: is57
 
+- name: Restart Postgres (5.8.x appliances)
+  service: name=rh-postgresql95-postgresql state=restarted
+  when: is58
+
 # For (5.{4,5,6}.x appliances). Rubyrep was removed in 57x for which,
 # pglogical now handles replication. http://manageiq.org/blog/2016/08/last-week-in-manageiq-saying-goodbye-to-rubyrep/
 - name: Remove replication
