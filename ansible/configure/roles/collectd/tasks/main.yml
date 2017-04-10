@@ -21,7 +21,7 @@
 - name: Install collectd rpms (rhel7)
   yum: name={{ item }} state=present
   with_items: "{{collectd_packages[config_type]}}"
-  when: (is55 or is56 or is57 of is58 or isMaster)
+  when: (is55 or is56 or is57 or is58 or isMaster)
 
 - name: Install collectd rpms (rhel6)
   yum: name={{ item }} state=present
