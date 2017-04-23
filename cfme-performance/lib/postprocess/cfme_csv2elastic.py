@@ -252,6 +252,47 @@ class ElasticIndexer(object):
             data=docs['metadata']
         )
         print('\t..indexed metata successfully.')
+        print('\t..Now uploading summary data. This will take a short while')
+        count = 0
+
+        for summary in docs['summary_data']:
+            for key in summary:
+                if key == "provider" or key == "scenario_name":
+                    continue
+                for item in summary[key]:
+                    run_uid = docs['metadata']['cfme_run_md5'] + str(count)
+                    count = count + 1
+                    md5 = hashlib.md5((run_uid).encode('utf-8')).hexdigest()
+
+                    # total memory data is different from USS/PSS/etc. data
+                    if key == "total_memory":
+                        ib_data1 = self.gen_action(
+                            index_name=index_names['summary'],
+                            doc_type="total_memory",
+                            uid=md5,
+                            # timestamp=docs['metadata']['timestamp'],
+                            data=item,
+                        )
+                        self.actions.append(ib_data1)
+                        if len(self.actions) > INDEXING_THRESHOLD:
+                            self.bulk_upload()
+                        continue
+
+                    ib_data1 = self.gen_action(
+                        index_name=index_names['summary'],
+                        doc_type="summary_data",
+                        uid=md5,
+                        # timestamp=docs['metadata']['timestamp'],
+                        data=item,
+                    )
+                    self.actions.append(ib_data1)
+
+                    # for cfme docs, INDEXING_THRESHOLD=14 doesn't results in a 413 'Request Entity Too Large'
+                    # we could change elasticsearch instance's default params, but to avoid that,
+                    # we're batch processing actions here.
+                    if len(self.actions) > INDEXING_THRESHOLD:
+                        self.bulk_upload()
+
         print('\t..Now uploading smem data. This could take some time')
 
         # Now, upload smem data
@@ -312,7 +353,7 @@ class CfmeResultsParser(object):
         timestamp = datetime.strptime(timestamp, "%Y%m%d%H%M%S")
         workload_name = re.search('(?i)[a-z-]+', dirname)
         workload_name = workload_name.group().strip('-').replace('workload-','')
-        version = re.search('-[0-9\.]+$', dirname).group().strip('-')
+        version = re.search('-[0-9\.]+', dirname).group().strip('-')
         return [timestamp, workload_name, version]
 
     def process_version_info(self, csv_bundle):
@@ -358,14 +399,13 @@ class CfmeResultsParser(object):
                 for mem_type in item:
                     item[mem_type] = float(item[mem_type])
                 item['TimeStamp'] = tstamp.strftime("%Y-%m-%d %H:%M:%S")
-
         return csv_contents
 
-    def process_summary_csv(self, csv_path, scenerio):
+    def process_summary_csv(self, csv_path, scenario, md5, indexing_params):
         """
         cleans up and processes *-summary.csv files in a scenario
         """
-        metadata_dict = { 'scenario_name': scenerio }
+        metadata_dict = { 'scenario_name': scenario }
         summary = open(csv_path).read()
         # cleanup summary (not a pure csv!)
         summary = re.sub('(-)+\n.*\n(-)+', '', summary)
@@ -376,6 +416,7 @@ class CfmeResultsParser(object):
         # groups[0] --> version/provider + total memory
         scenario_metadata = re.compile(r'(?i)^Version.*\n').search(groups[0]).group()
         scenario_metadata = scenario_metadata.strip().split(',')
+
         # we're already handling CFME version in __get_params
         # metadata_dict['cfme_version'] = scenario_metadata[0].split()[-1]
         metadata_dict['provider'] = scenario_metadata[1].split()[-1]
@@ -383,29 +424,55 @@ class CfmeResultsParser(object):
         metadata_dict['total_memory'] = self.csv_sanitizer(
             csv_contents=csv.DictReader(io.StringIO(memory_str)),
             type='summary')
-        # groups[1] --> RSS
-        metadata_dict['per_process_RSS'] = self.csv_sanitizer(
-            csv_contents=csv.DictReader(io.StringIO(groups[1])),
-            type='summary')
-        # groups[2] --> PSS
-        metadata_dict['per_process_PSS'] = self.csv_sanitizer(
-            csv_contents=csv.DictReader(io.StringIO(groups[2])),
-            type='summary')
-        # groups[3] --> USS
-        metadata_dict['per_process_USS'] = self.csv_sanitizer(
-            csv_contents=csv.DictReader(io.StringIO(groups[3])),
-            type='summary')
-        # groups[4] --> VSS
-        metadata_dict['per_process_VSS'] = self.csv_sanitizer(
-            csv_contents=csv.DictReader(io.StringIO(groups[4])),
-            type='summary')
-        # groups[5] --> SWAP
-        metadata_dict['per_process_SWAP'] = self.csv_sanitizer(
-            csv_contents=csv.DictReader(io.StringIO(groups[5])),
-            type='summary')
+        final_result = []
+        for item in metadata_dict['total_memory']:
+            datum = dict(
+                scenario_name = scenario,
+                cfme_run_md5 = md5,
+                cfme_version = indexing_params[2],
+                workload_type = indexing_params[1],
+                provider = metadata_dict['provider'],
+                TimeStamp = indexing_params[0].strftime("%Y-%m-%d %H:%M:%S")
+            )
+            datum.update(item)
+            final_result.append(datum)
+        metadata_dict['total_memory'] = final_result
+        final_result = []
+        count = 0
+        dtype = ""
+        for group in groups[1:]:
+            if count == 0:
+                dtype = "RSS"
+            elif count == 1:
+                dtype  = "PSS"
+            elif count == 2:
+                dtype = "USS"
+            elif count == 3:
+                dtype = "VSS"
+            elif count == 4:
+                dtype = "SWAP"
+            else:
+                break
+            count = count+1
+            sanitized_data = self.csv_sanitizer(
+                csv_contents=csv.DictReader(io.StringIO(group)),
+                type='summary')
+            for item in sanitized_data:
+                datum = dict(
+                    scenario_name = scenario,
+                    memory_data_type = dtype,
+                    cfme_run_md5 = md5,
+                    cfme_version = indexing_params[2],
+                    workload_type = indexing_params[1],
+                    provider = metadata_dict['provider'],
+                    TimeStamp = indexing_params[0].strftime("%Y-%m-%d %H:%M:%S")
+                )
+                datum.update(item)
+                final_result.append(datum)
+        metadata_dict['per_process_memory'] = final_result
         return metadata_dict
 
-    def handle_scenario(self, csv_bundle, scenerio, md5):
+    def handle_scenario(self, csv_bundle, scenerio, md5, indexing_params):
         """
         3 kinds of scenarios:
             - scenario_summary [{}]
@@ -418,7 +485,7 @@ class CfmeResultsParser(object):
         for current_csv in csv_bundle:
             csv_name = os.path.basename(current_csv)
             if re.match('.*-summary.csv', csv_name):
-                scenario_data['scenario_summary'] = self.process_summary_csv(current_csv, scenerio)
+                scenario_data['scenario_summary'] = self.process_summary_csv(current_csv, scenerio, md5, indexing_params)
                 continue
             elif re.match('appliance.csv', csv_name):
                 reader_obj = csv.DictReader(open(current_csv))
@@ -467,7 +534,7 @@ class CfmeResultsParser(object):
         results_data['metadata']['workload_type'] = indexing_params[1]
         results_data['metadata']['cfme_version'] = indexing_params[2]
         results_data['metadata']['run_dirname'] = self.run_name
-        results_data['metadata']['scenarios'] = []
+        results_data["summary_data"] = []
 
         for component in os.listdir(self.results_dir):
             if os.path.isdir(os.path.join(self.results_dir, component)):
@@ -475,8 +542,8 @@ class CfmeResultsParser(object):
                 if component == 'version_info':
                     results_data['metadata']['version_info'] = self.process_version_info(csv_bundle)
                 else:
-                    handled_data = self.handle_scenario(csv_bundle, component, md5)
-                    results_data['metadata']['scenarios'].append(handled_data.pop('scenario_summary'))
+                    handled_data = self.handle_scenario(csv_bundle, component, md5, indexing_params)
+                    results_data['summary_data'].append(handled_data.pop('scenario_summary'))
                     results_data['smem_data'][component] = handled_data.copy()
                     del handled_data
         return results_data
