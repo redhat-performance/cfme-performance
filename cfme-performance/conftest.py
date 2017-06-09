@@ -1,6 +1,7 @@
 """pytest plugins"""
 import atexit
 from utils import log
+from utils import collectd
 import collections
 import diaper
 import pytest
@@ -47,12 +48,14 @@ def pytest_addoption(parser):
                      help="Which stream to use.")
     group._addoption('--sprout-timeout', dest='sprout_timeout', type=int,
                      default=10080, help="How many minutes is the lease timeout.")
-    group._addoption(
-        '--sprout-version', dest='sprout_version', default=None, help="Which version to use.")
+    group._addoption('--sprout-version', dest='sprout_version',
+                     default=None, help="Which version to use.")
     group._addoption('--sprout-override-ram', dest='sprout_override_ram', type=int,
-        default=0, help="Override RAM (MB). 0 means no override.")
+                     default=0, help="Override RAM (MB). 0 means no override.")
     group._addoption('--sprout-override-cpu', dest='sprout_override_cpu', type=int,
-        default=0, help="Override CPU core count. 0 means no override.")
+                     default=0, help="Override CPU core count. 0 means no override.")
+    group._addoption('--use-collectd', dest='use_collectd', action='store_true', default=False,
+                    help="Run collectd on appliance and upload data on monitor-host.")
 
 
 def pytest_configure(config):
@@ -112,6 +115,8 @@ def pytest_configure(config):
         perf_data['replication_master']['appliance_name'] = config.option.replication_master_name
         logger().info('Replication Master appliance name is {}'.format(
             perf_data['replication_master']['appliance_name']))
+    if config.option.use_collectd and config.option.use_sprout:
+        collectd.setup_collectd(perf_data)
 
 
 def pytest_collection_modifyitems(session, config, items):
