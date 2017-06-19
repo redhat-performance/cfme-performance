@@ -54,12 +54,25 @@
     isMaster: false
   when: version_output.stdout|match("^5.8.")
 
+- name: Set fact for CFME version 5.9.x
+  set_fact:
+    is54: false
+    is55: false
+    is56: false
+    is57: false
+    is58: false
+    is59: true
+    isMaster: false
+  when: version_output.stdout|match("^5.9.")
+
 - name: Set fact for Upstream ManageIQ Master
   set_fact:
     is54: false
     is55: false
     is56: false
     is57: false
+    is58: false
+    is59: false
     isMaster: true
   when: version_output.stdout|match("^master")
 
