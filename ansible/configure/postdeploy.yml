@@ -14,6 +14,7 @@
     - ../group_vars/all.local.yml
   roles:
     - sshkey
+  ignore_errors: True
 
 - hosts: cfme-vmdb
   gather_facts: true
