@@ -1,0 +1,9 @@
+# Cloud Forms Database appliances
+- hosts: cfme-vmdb, cfme-worker
+  gather_facts: false
+  remote_user: root
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/all.local.yml
+  roles:
+    - health
