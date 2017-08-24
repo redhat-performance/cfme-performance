@@ -20,7 +20,7 @@ def setup_collectd(perf_data):
     ssh_client = SSHClient()
     ssh_client.run_command(commandstring)
 
-    version_string = get_current_version_string()
+    version_string = get_current_version_string().replace(".","")
     appliance_name_update = perf_data['appliance']['appliance_name'].replace("LATEST",version_string)
     perf_data['appliance']['appliance_name'] = appliance_name_update
 
