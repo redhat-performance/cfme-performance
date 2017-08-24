@@ -160,6 +160,59 @@ LoadPlugin uptime
       ValuesFrom "count"
     </Result>
   </Query>
+
+  # Openshift provider attributes count
+  <Query ocp_containers_count_by_state>
+    Statement "select state,count(*) from containers group by state"
+    <Result>
+      Type gauge
+      InstancePrefix "ocp-containers-state"
+      InstancesFrom "state"
+      ValuesFrom "count"
+    </Result>
+  </Query>
+  <Query ocp_pods_count_by_state>
+    Statement "select phase,count(*) from container_groups group by phase;  "
+    <Result>
+      Type gauge
+      InstancePrefix "ocp-pods-phase"
+      InstancesFrom "phase"
+      ValuesFrom "count"
+    </Result>
+  </Query>
+  <Query ocp_images_count>
+    Statement "select count(*) from container_images"
+    <Result>
+      Type gauge
+      InstancePrefix "ocp-images"
+      ValuesFrom "count"
+    </Result>
+  </Query>
+  <Query ocp_projects_count>
+    Statement "select count(*) from container_projects"
+    <Result>
+      Type gauge
+      InstancePrefix "ocp-projects"
+      ValuesFrom "count"
+    </Result>
+  </Query>
+  <Query ocp_nodes_count>
+    Statement "select count(*) from container_nodes"
+    <Result>
+      Type gauge
+      InstancePrefix "ocp-nodes"
+      ValuesFrom "count"
+    </Result>
+  </Query>
+  <Query ocp_services_count>
+    Statement "select count(*) from container_services"
+    <Result>
+      Type gauge
+      InstancePrefix "ocp-services"
+      ValuesFrom "count"
+    </Result>
+  </Query>
+
   # vms table query
   <Query vms_count_by_state>
     Statement "select raw_power_state,count(*) from vms group by raw_power_state"
@@ -235,6 +288,23 @@ LoadPlugin uptime
     #Query miq_queue_by_method
     #Query miq_queue_qcm
 {% endif %}
+
+    # ocp queries
+    {% if vmdb_ocp_quries %}
+        Query ocp_containers_count_by_state
+        Query ocp_pods_count_by_state
+        Query ocp_images_count
+        Query ocp_projects_count
+        Query ocp_nodes_count
+        Query ocp_services_count
+    {% else %}
+        # Query ocp_containers_count_by_state
+        # Query ocp_pods_count_by_state
+        # Query ocp_images_count
+        # Query ocp_projects_count
+        # Query ocp_nodes_count
+        # Query ocp_services_count
+    {% endif %}
 
     # vms query
 {% if vmdb_vms_queries %}

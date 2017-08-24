@@ -56,6 +56,7 @@ vmdb_miq_queue_queries: true
 vmdb_vms_queries: true
 vmdb_workers_queries: true
 cfme_carbon_prefix: manageiq
+vmdb_ocp_quries: true
 
 # Per appliance settings:
 appliances:

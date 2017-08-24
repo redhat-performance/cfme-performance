@@ -14,7 +14,6 @@ A collection of playbooks for Performance Analysis and Testing of CFME/ManageIQ 
  - [Configure](#configure)
  - [Create](#create)
  - [Install](#install)
- - [Workloads](#workloads) - WIP
 - [Which playbooks should I use?](#which-playbooks-should-i-use)
 
 
@@ -72,10 +71,6 @@ These playbooks automate the creation of CFME/ManageIQ appliances, and environme
 
 ### [Install](install/)
 These playbooks are for installing the infrastructure for Performance Analysis and Testing.  They will also serve to automate bringing new builds into the infrastructure for testing.
-
-### [Workloads](workloads/)
-**WIP** - These playbooks will automate adding a provider, configuring roles, and configuring advanced settings on the appliance.  It will also include some basic workloads such as queuing a refresh, provisioning, smart state analysis, etc...
-
 
 ## Which playbooks should I use?
 * If you want to create a new virtual machine:

@@ -3662,6 +3662,115 @@
         "title": "MiqQueue"
       },
       {
+        "title": "Openshift infra details",
+        "height": "250px",
+        "editable": true,
+        "collapse": true,
+        "panels": [
+          {
+            "title": "Pods and Containers count",
+            "error": false,
+            "span": 12,
+            "editable": true,
+            "type": "graph",
+            "isNew": true,
+            "id": 178,
+            "targets": [
+              {
+                "target": "aliasByNode(aliasSub($Cloud.$Node.postgresql-vmdb_production.gauge-ocp-containers-state-running, 'gauge-ocp-', ''), 3)",
+                "refId": "A",
+                "textEditor": false
+              },
+              {
+                "target": "aliasByNode(aliasSub($Cloud.$Node.postgresql-vmdb_production.gauge-ocp-pods-phase-Running, 'gauge-ocp-', ''), 3)",
+                "refId": "B",
+                "textEditor": false
+              },
+              {
+                "target": "aliasByNode(aliasSub($Cloud.$Node.postgresql-vmdb_production.gauge-ocp-images, 'gauge-ocp-', ''), 3)",
+                "refId": "C",
+                "textEditor": false
+              },
+              {
+                "target": "aliasByNode(aliasSub($Cloud.$Node.postgresql-vmdb_production.gauge-ocp-nodes, 'gauge-ocp-', ''), 3)",
+                "refId": "D",
+                "textEditor": false
+              },
+              {
+                "target": "aliasByNode(aliasSub($Cloud.$Node.postgresql-vmdb_production.gauge-ocp-projects, 'gauge-ocp-', ''), 3)",
+                "refId": "E",
+                "textEditor": false
+              },
+              {
+                "target": "aliasByNode(aliasSub($Cloud.$Node.postgresql-vmdb_production.gauge-ocp-services, 'gauge-ocp-', ''), 3)",
+                "refId": "F",
+                "textEditor": false
+              }
+            ],
+            "datasource": null,
+            "renderer": "flot",
+            "yaxes": [
+              {
+                "label": null,
+                "show": true,
+                "logBase": 1,
+                "min": null,
+                "max": null,
+                "format": "short"
+              },
+              {
+                "label": null,
+                "show": true,
+                "logBase": 1,
+                "min": null,
+                "max": null,
+                "format": "short"
+              }
+            ],
+            "xaxis": {
+              "show": true
+            },
+            "grid": {
+              "threshold1": null,
+              "threshold2": null,
+              "threshold1Color": "rgba(216, 200, 27, 0.27)",
+              "threshold2Color": "rgba(234, 112, 112, 0.22)"
+            },
+            "lines": true,
+            "fill": 1,
+            "linewidth": 2,
+            "points": false,
+            "pointradius": 5,
+            "bars": false,
+            "stack": false,
+            "percentage": false,
+            "legend": {
+              "show": true,
+              "values": false,
+              "min": false,
+              "max": false,
+              "current": false,
+              "total": false,
+              "avg": false
+            },
+            "nullPointMode": "connected",
+            "steppedLine": false,
+            "tooltip": {
+              "value_type": "cumulative",
+              "shared": true,
+              "sort": 0,
+              "msResolution": false
+            },
+            "timeFrom": null,
+            "timeShift": null,
+            "aliasColors": {},
+            "seriesOverrides": [],
+            "links": []
+          }
+        ],
+        "showTitle": true
+      },
+      {
         "collapse": true,
         "editable": true,
         "height": "250px",
@@ -4142,7 +4251,7 @@
         "30d"
       ]
     },
-    "timezone": "browser",
+    "timezone": "utc",
     "title": "{{item.dashboard_name}}",
     "tags": [
       "CFME"
