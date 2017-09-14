@@ -46,7 +46,25 @@ sleep 15
 # EOB
 # EOA
 
+# oc cluster up
+# oc login -u system:admin -n default
+# oadm policy add-cluster-role-to-user cluster-admin admin --config=/var/lib/origin/openshift.local.config/master/admin.kubeconfig
+# oadm policy add-role-to-user cluster-admin admin
+# oc get pods
+# oc get route
+
 # delete projects
 # for i in `oc get projects | grep clusterproject | awk -F' ' '{print $1}'`; do oc delete project $i; done
 
 date +"%Y-%m-%d %H:%M:%S,%3N" >> $logfile
+
+# journalctl -fu atomic-openshift-master | grep -E "E0720|F0720"
+
+# for node in `oc get nodes | grep 'NotReady ' | awk '{print $1}'`; do ping -c 1  $node >> test_alive; done
+# sed -n -e 's#^.*com (\(.*\)): icmp_seq.*#\1#p' test_alive
+# for i in `oc get nodes | grep '18x1x.\.' | awk '{print $1}'`; do oc delete node $i; done
+#
+# token=$(oc sa get-token -n management-infra management-admin)
+# curl -L -H "Authorization: Bearer $token" -k -XGET https://10.16.31.50:8443/oapi/v1/imagestreams > is.json
+# egrep 'hello.*@sha256' is.json -m 10 | sed -n -e 's#.*/admin/hello[0-9]*@\(sha256.*\)",#\1#p'
+# for i in `egrep 'hello.*@sha256' is.json -m 5000 | sed -n -e 's#.*/admin/hello[0-9]*@\(sha256.*\)",#\1#p'`; do oc delete image $i; done
