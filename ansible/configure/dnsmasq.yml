@@ -1,0 +1,12 @@
+---
+#
+# Post deployment of appliance automation
+#
+
+- hosts: all
+  gather_facts: false
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/all.local.yml
+  roles:
+    - dnsmasq

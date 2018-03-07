@@ -1,0 +1,21 @@
+...
+  - name: Install dnsmasq
+    shell:
+       yum install dnsmasq -y
+  - name: Configure the hostname to ip remap
+    lineinfile:
+         dest: /etc/dnsmasq.conf
+         regexp: '^address='
+         line: 'address=/{{ hostname_map }}/{{ remap_ip }}'
+         state: present
+  - name: Configure the resolv.conf to use dnsmasq
+    lineinfile:
+         dest: /etc/resolv.conf
+         line: 'nameserver 127.0.0.1'
+         state: present
+  - name: Start the dnsmasq service
+    shell:
+       systemctl start dnsmasq
+  - name: Check if we are able to ping a host or not
+    shell:
+       ping -c 1 "{{ hostname_map }}"
