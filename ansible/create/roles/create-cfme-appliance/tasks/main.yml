@@ -5,7 +5,7 @@
 
 - name: cfme-appliance setup
   shell: |
-    ./roles/create-cfme-appliance/scripts/create-cfme-appliance.py \
+    ./create/roles/create-cfme-appliance/scripts/create-cfme-appliance.py \
           "{{ item }}" \
           "{{ rhevm_host }}" \
           "{{ rhevm_username }}" \
@@ -16,7 +16,7 @@
 
 - name: cfme-appliance setup
   shell: |
-    ./roles/create-cfme-appliance/scripts/create-cfme-appliance.py \
+    ./create/roles/create-cfme-appliance/scripts/create-cfme-appliance.py \
           "{{ item }}" \
           "{{ rhevm_host }}" \
           "{{ rhevm_username }}" \
