@@ -29,7 +29,7 @@
     - hostname
     - repos
     - { role: ntpd, when: is54}
-    - { role: chronyd, when: (is55 or is56 or is57 or is58 or isMaster)}
+    - { role: chronyd, when: (is55 or is56 or is57 or is58 or is510 or isMaster)}
     - { role: config-interface, when: "{{appliances[inventory_hostname].interfaces|length}} > 0" }
     - { role: proctitle-patch, when: is55}
     - { role: init-vmdb, when: not isdeployed }
